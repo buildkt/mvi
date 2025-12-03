@@ -1,0 +1,15 @@
+name: Reusable - Unit Test
+on:
+  workflow_call:
+    inputs:
+      module:
+        required: true
+        type: string
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Run unit tests for ${{ inputs.module }}
+        run: ./gradlew :${{ inputs.module }}:testDebugUnitTest

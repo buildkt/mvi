@@ -1,0 +1,120 @@
+# This is the main workflow that triggers on pull requests.
+# It orchestrates the gathering of changed modules and runs tests in parallel.
+name: Run Module Checks
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  workflow_dispatch:
+
+jobs:
+  # =====================================================================================
+  # JOB 1: GATHER & PREPARE
+  # This job determines which modules were affected by the PR changes
+  # and creates a dedicated, pre-filtered strategy matrix for each test type.
+  # =====================================================================================
+  gather-modules:
+    runs-on: ubuntu-latest
+    outputs:
+      static_check_matrix: ${{ steps.generate-matrix.outputs.static_check_matrix }}
+      unit_test_matrix: ${{ steps.generate-matrix.outputs.unit_test_matrix }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # We need the full history to compare the PR head against its base.
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Fetch the base branch of the PR to ensure we can diff against it.
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+
+          # Get a list of all changed files, separated by newlines.
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} ${{ github.sha }})
+
+          # Use a here-document to safely pass the multi-line list to the outputs.
+          cat <<EOF >> $GITHUB_OUTPUT
+          changed_files<<DELIMITER
+          ${CHANGED_FILES}
+          DELIMITER
+          EOF
+
+      - name: Generate strategy matrices
+        id: generate-matrix
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // =================================================================
+            // MANUAL MODULE CONFIGURATION - The Single Source of Truth
+            // =================================================================
+            const modulesWithUnitTests = [ "core/mvi/core", "core/mvi/android" ];
+            const modulesWithStaticChecks = [ "core/mvi/core", "core/mvi/android", "core/design-system", "samples/address", "samples/product" ];
+            // =================================================================
+
+            const changedFiles = `${{ steps.changed-files.outputs.changed_files }}`.split('\n').filter(f => f);
+
+            if (changedFiles.length === 0) {
+              console.log("No changed files detected. All matrices will be empty.");
+              core.setOutput('static_check_matrix', { include: [] });
+              core.setOutput('unit_test_matrix', { include: [] });
+              return;
+            }
+
+            const changedModules = new Set();
+            const allModules = new Set([...modulesWithUnitTests, ...modulesWithStaticChecks]);
+
+            for (const file of changedFiles) {
+              for (const modulePath of allModules) {
+                if (file.startsWith(modulePath + '/')) {
+                  changedModules.add(modulePath);
+                }
+              }
+            }
+            
+            const staticCheckMatrix = { include: [] };
+            const unitTestMatrix = { include: [] };
+
+            for (const module of changedModules) {
+              const gradlePath = module.split('/').join(':');
+
+              if (modulesWithStaticChecks.includes(module)) {
+                staticCheckMatrix.include.push({ module: gradlePath });
+              }
+              if (modulesWithUnitTests.includes(module)) {
+                unitTestMatrix.include.push({ module: gradlePath });
+              }
+            }
+
+            console.log("Static Check Matrix:", JSON.stringify(staticCheckMatrix, null, 2));
+            console.log("Unit Test Matrix:", JSON.stringify(unitTestMatrix, null, 2));
+
+            core.setOutput('static_check_matrix', staticCheckMatrix);
+            core.setOutput('unit_test_matrix', unitTestMatrix);
+
+  # =====================================================================================
+  # PARALLEL WORKER JOBS
+  # The job-level 'if' condition now prevents the job from starting if its matrix is empty,
+  # which resolves the "matrix must define at least one vector" error.
+  # =====================================================================================
+  static-check:
+    needs: gather-modules
+    if: fromJson(needs.gather-modules.outputs.static_check_matrix).include[0] != null
+    strategy:
+      matrix: ${{ fromJson(needs.gather-modules.outputs.static_check_matrix) }}
+    name: "Lint :${{ matrix.module }}"
+    uses: ./.github/workflows/static-check.yml
+    with:
+      module: ${{ matrix.module }}
+
+  unit-test:
+    needs: gather-modules
+    if: fromJson(needs.gather-modules.outputs.unit_test_matrix).include[0] != null
+    strategy:
+      matrix: ${{ fromJson(needs.gather-modules.outputs.unit_test_matrix) }}
+    name: "Test :${{ matrix.module }}"
+    uses: ./.github/workflows/unit-test.yml
+    with:
+      module: ${{ matrix.module }}

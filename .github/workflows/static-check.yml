@@ -1,0 +1,17 @@
+name: Reusable - Static Check
+on:
+  workflow_call:
+    inputs:
+      module:
+        required: true
+        type: string
+jobs:
+  run-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Run lint for ${{ inputs.module }}
+        run: ./gradlew :${{ inputs.module }}:lint
+      - name: Run kt-lint for ${{ inputs.module }}
+        run: ./gradlew :${{ inputs.module }}:ktlintCheck

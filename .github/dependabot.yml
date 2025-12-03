@@ -1,0 +1,13 @@
+# Documentation: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      third-parties-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
