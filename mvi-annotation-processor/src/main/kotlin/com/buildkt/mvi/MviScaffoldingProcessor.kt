@@ -10,15 +10,21 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
+import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FLOAT
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.LONG
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.STRING
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.UNIT
@@ -32,6 +38,9 @@ class MviScaffoldingProcessor(
     private val codeGenerator: CodeGenerator,
     private val logger: KSPLogger,
 ) : SymbolProcessor {
+
+    // Helper data class to hold nav argument info
+    private data class NavArgumentInfo(val name: String, val typeName: TypeName)
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val paneSymbols = resolver.getSymbolsWithAnnotation(MviScreen::class.qualifiedName!!)
@@ -52,11 +61,12 @@ class MviScaffoldingProcessor(
                         .filterIsInstance<KSClassDeclaration>()
                         .filter { intent -> intentDeclaration.asStarProjectedType().isAssignableFrom(intent.asStarProjectedType()) }
 
+                    val navArguments = findNavArguments(paneFunction)
                     val sideEffectMapClassName = generateSideEffectMapClass(paneFunction, uiStateDeclaration, intentDeclaration, relevantIntents)
                     val sideEffectBuilderClassName = generateSideEffectBuilderClass(paneFunction, uiStateDeclaration, intentDeclaration, relevantIntents)
                     val configClassName = generateConfigClass(paneFunction, uiStateDeclaration, intentDeclaration, sideEffectBuilderClassName, sideEffectMapClassName, relevantIntents)
                     val (viewModelClassName, factoryClassName) = generateViewModel(paneFunction, uiStateDeclaration, intentDeclaration, sideEffectMapClassName, configClassName)
-                    generateNavigationForPane(paneFunction, viewModelClassName, factoryClassName, configClassName)
+                    generateNavigationForPane(paneFunction, viewModelClassName, factoryClassName, configClassName, navArguments)
 
                 } catch (e: Exception) {
                     logger.error("Failed to process @MviScreen on ${paneFunction.simpleName.asString()}: ${e.stackTraceToString()}", paneFunction)
@@ -64,6 +74,20 @@ class MviScaffoldingProcessor(
             }
 
         return invalidPaneSymbols + invalidSideEffectIntentSymbols
+    }
+
+    private fun findNavArguments(paneFunction: KSFunctionDeclaration): List<NavArgumentInfo> {
+        val navArgumentAnnotationName = NavArgument::class.qualifiedName!!
+
+        return paneFunction.parameters
+            .filter { param -> param.annotations.any { it.annotationType.resolve().declaration.qualifiedName?.asString() == navArgumentAnnotationName } }
+            .map { param ->
+                NavArgumentInfo(
+                    name = param.name!!.asString(),
+                    typeName = param.type.toTypeName()
+                )
+            }
+            .toList()
     }
 
     private fun getMviDeclarationsFromAnnotation(paneFunction: KSFunctionDeclaration): Pair<KSClassDeclaration, KSClassDeclaration> {
@@ -134,8 +158,9 @@ class MviScaffoldingProcessor(
         val sideEffectInterface = MEMBER_SIDE_EFFECT.parameterizedBy(uiStateTypeName, intentTypeName)
 
         val fileBuilder = FileSpec.builder(sideEffectsRouterClassName.packageName, sideEffectsRouterClassName.simpleName)
-        val classBuilder = TypeSpec.classBuilder(sideEffectsRouterClassName)
-            .addSuperinterface(MEMBER_SIDE_EFFECTS_ROUTER.parameterizedBy(uiStateTypeName, intentTypeName))
+        val classBuilder = TypeSpec
+            .classBuilder(sideEffectsRouterClassName)
+            .addSuperinterface(superinterface = MEMBER_SIDE_EFFECT_MAP.parameterizedBy(uiStateTypeName, intentTypeName))
 
         val constructorBuilder = FunSpec.constructorBuilder()
         val getFunctionBody = FunSpec.builder("get")
@@ -185,12 +210,13 @@ class MviScaffoldingProcessor(
             classBuilder.addProperty(
                 PropertySpec.builder(propName, sideEffectInterface)
                     .mutable(mutable = true)
-                    .addModifiers(KModifier.LATEINIT)
+                    .initializer("noOpSideEffect()")
                     .build()
             )
         }
 
         FileSpec.builder(packageName, builderClassName.simpleName)
+            .addImport("com.buildkt.mvi", "noOpSideEffect")
             .addType(classBuilder.build())
             .build()
             .writeTo(codeGenerator, Dependencies(true, paneFunction.containingFile!!))
@@ -298,7 +324,7 @@ class MviScaffoldingProcessor(
 
         val factoryClassName = ClassName(packageName, "${viewModelName}Factory")
         val factoryClass = TypeSpec.classBuilder(factoryClassName)
-            .addSuperinterface(MEMBER_VIEWMODEL_FACTORY)
+            .addSuperinterface(superinterface = MEMBER_VIEW_MODEL_PROVIDER_FACTORY)
             .primaryConstructor(FunSpec.constructorBuilder().addParameter("config", configClassName).build())
             .addProperty(PropertySpec.builder("config", configClassName, KModifier.PRIVATE).initializer("config").build())
             .addFunction(
@@ -330,22 +356,17 @@ class MviScaffoldingProcessor(
         viewModelClassName: ClassName,
         factoryClassName: ClassName,
         configClassName: ClassName,
+        navArguments: List<NavArgumentInfo>
     ) {
         val packageName = paneFunction.packageName.asString()
         val paneName = paneFunction.simpleName.asString()
         val navFunName = paneName.replaceFirstChar { it.lowercase(Locale.getDefault()) }
-        val navArgumentAnnotationName = NavArgument::class.simpleName!!
 
         val fileBuilder = FileSpec.builder(packageName, "${paneName}Navigation")
             .addImport("androidx.compose.runtime", "getValue", "collectAsState")
             .addImport("androidx.lifecycle.viewmodel.compose", "viewModel")
             .addImport("androidx.navigation.compose", "composable")
             .addImport("com.buildkt.mvi.android", "CollectNavigationEvents")
-
-        // Identify navigation arguments by looking for the @NavArgument annotation.
-        val navArgs = paneFunction.parameters.filter { param ->
-            param.annotations.any { it.shortName.asString() == navArgumentAnnotationName }
-        }
 
         val navFunBuilder = FunSpec.builder(navFunName)
             .receiver(MEMBER_NAV_GRAPH_BUILDER)
@@ -358,20 +379,19 @@ class MviScaffoldingProcessor(
                 )
             )
 
-        val argumentExtractionBlock = navArgs.joinToString("\n") { navArg ->
-            val name = navArg.name!!.asString()
-            val typeName = navArg.type.toTypeName().toString()
-            // This is a simplified type-based argument extraction.
-            // A production-grade version might need more complex type checking.
-            when {
-                "String" in typeName -> """val $name = backStackEntry.arguments?.getString("$name")"""
-                "Long" in typeName -> """val $name = backStackEntry.arguments?.getLong("$name") ?: 0L"""
-                "Int" in typeName -> """val $name = backStackEntry.arguments?.getInt("$name") ?: 0"""
-                "Boolean" in typeName -> """val $name = backStackEntry.arguments?.getBoolean("$name") ?: false"""
-                "Float" in typeName -> """val $name = backStackEntry.arguments?.getFloat("$name") ?: 0f"""
+        val argumentExtractionBlock = navArguments.joinToString("\n") { navArg ->
+            val name = navArg.name
+            val typeName = navArg.typeName
+
+            when (typeName) {
+                STRING -> """val $name = backStackEntry.arguments?.getString("$name")!!"""
+                LONG -> """val $name = backStackEntry.arguments?.getLong("$name") ?: 0L"""
+                INT -> """val $name = backStackEntry.arguments?.getInt("$name") ?: 0"""
+                BOOLEAN -> """val $name = backStackEntry.arguments?.getBoolean("$name") ?: false"""
+                FLOAT -> """val $name = backStackEntry.arguments?.getFloat("$name") ?: 0f"""
                 else -> {
-                    logger.warn("Unsupported NavArgument type '$typeName' for '$name'. Defaulting to null. Please handle manually if it's a Parcelable.", navArg)
-                    """    val $name: $typeName? = backStackEntry.arguments?.getParcelable("$name")"""
+                    logger.warn("Unsupported NavArgument type '$typeName' for '$name'.Mapping as Parcelable.")
+                    """    val $name: $typeName = backStackEntry.arguments?.getParcelable("$name")!!"""
                 }
             }
         }
@@ -381,8 +401,8 @@ class MviScaffoldingProcessor(
         composableArgs.add("onIntent = viewModel::onIntent")
         composableArgs.add("uiEvents = viewModel.uiEvents")
 
-        navArgs.forEach { navArg ->
-            val argName = navArg.name!!.asString()
+        navArguments.forEach { navArg ->
+            val argName = navArg.name
             composableArgs.add("$argName = $argName")
         }
         val composableArgsString = composableArgs.joinToString(separator = ",\n        ")
@@ -432,8 +452,8 @@ class MviScaffoldingProcessor(
         val MEMBER_NAV_GRAPH_BUILDER = ClassName("androidx.navigation", "NavGraphBuilder")
         val MEMBER_REDUCER = ClassName("com.buildkt.mvi", "Reducer")
         val MEMBER_SIDE_EFFECT = ClassName("com.buildkt.mvi", "SideEffect")
-        val MEMBER_SIDE_EFFECTS_ROUTER = ClassName("com.buildkt.mvi", "SideEffectMap")
+        val MEMBER_SIDE_EFFECT_MAP = ClassName("com.buildkt.mvi", "SideEffectMap")
         val MEMBER_UI_EVENT = ClassName("com.buildkt.mvi.android", "UiEvent")
-        val MEMBER_VIEWMODEL_FACTORY = ClassName("androidx.lifecycle", "ViewModelProvider", "Factory")
+        val MEMBER_VIEW_MODEL_PROVIDER_FACTORY = ClassName("androidx.lifecycle", "ViewModelProvider", "Factory")
     }
 }
