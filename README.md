@@ -1,4 +1,11 @@
 # BuildKt MVI: A Modern Android Architecture, Without the Boilerplate
+| Library              | Version                                                                                               | 
+|:---------------------|:------------------------------------------------------------------------------------------------------| 
+| Android              | ![Maven Central Version](https://img.shields.io/maven-central/v/com.buildkt.mvi/android)              |
+| Annotations          | ![Maven Central Version](https://img.shields.io/maven-central/v/com.buildkt.mvi/annotation)           |
+| Annotation processor | ![Maven Central Version](https://img.shields.io/maven-central/v/com.buildkt.mvi/annotation-processor) |
+| Core                 | ![Maven Central Version](https://img.shields.io/maven-central/v/com.buildkt.mvi/core)                 |
+
 BuildKt MVI is an opinionated, highly-decoupled MVI (Model-View-Intent) framework for Android, built from 
 the ground up for Jetpack Compose. Its goal is simple: to let you build scalable and testable applications by 
 eliminating nearly all the repetitive code associated with the MVI pattern.
