@@ -38,10 +38,10 @@ plugins {
 
 dependencies {
     // MVI Android 
-    implementation("com.buildkt.mvi:mvi-android:0.0.1")
+    implementation("com.buildkt.mvi:android:0.1.1")
     
     // KSP Annotation Processor
-    ksp("com.buildkt.mvi:mvi-annotation-processor:0.0.1")
+    ksp("com.buildkt.mvi:annotation-processor:0.1.1")
 }
 ```
 

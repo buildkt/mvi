@@ -2,10 +2,12 @@ package com.buildkt.showcase
 
 import android.content.Context
 import androidx.room.Room
-import com.buildkt.showcase.data.AddressRepositoryImpl
-import com.buildkt.showcase.data.local.AddressDao
-import com.buildkt.showcase.data.local.AddressDatabase
-import com.buildkt.showcase.domain.AddressRepository
+import com.buildkt.feature.address.data.AddressRepositoryImpl
+import com.buildkt.feature.address.data.local.AddressDao
+import com.buildkt.feature.address.data.local.AddressDatabase
+import com.buildkt.feature.address.domain.AddressRepository
+import com.buildkt.feature.restaurants.data.RestaurantRepositoryImpl
+import com.buildkt.feature.restaurants.domain.RestaurantRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.EntryPoint
@@ -17,14 +19,16 @@ import javax.inject.Singleton
 
 @EntryPoint
 @InstallIn(ActivityComponent::class)
-interface PlaygroundAppEntryPoint {
+interface SampleAppEntryPoint {
 
     fun getAddressRepository(): AddressRepository
+
+    fun getRestaurantsRepository(): RestaurantRepository
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DeliveryAppDataModule {
+object SampleAppDataModule {
 
     @Provides
     @Singleton
@@ -40,4 +44,9 @@ object DeliveryAppDataModule {
     @Singleton
     fun provideAddressRepository(addressDao: AddressDao): AddressRepository =
         AddressRepositoryImpl(addressDao)
+
+    @Provides
+    @Singleton
+    fun provideRestaurantRepository(): RestaurantRepository =
+        RestaurantRepositoryImpl()
 }

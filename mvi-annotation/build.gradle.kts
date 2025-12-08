@@ -1,12 +1,13 @@
 plugins {
     id("java-library")
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
     alias(libs.plugins.maven.publish)
 }
 
 val artifactId = "annotation"
 group = "com.buildkt.mvi"
-version = "0.1.0"
+version = "0.1.1"
 
 kotlin {
     jvmToolchain(jdkVersion = 11)

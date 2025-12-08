@@ -44,6 +44,10 @@ kotlin {
 dependencies {
     implementation(projects.mviAndroid)
 
+    implementation(projects.samples.address)
+    implementation(projects.samples.designSystem)
+    implementation(projects.samples.restaurants)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

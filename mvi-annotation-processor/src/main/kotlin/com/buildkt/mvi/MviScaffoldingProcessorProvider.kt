@@ -5,9 +5,9 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 
 class MviScaffoldingProcessorProvider : SymbolProcessorProvider {
-
-    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor = MviScaffoldingProcessor(
-        codeGenerator = environment.codeGenerator,
-        logger = environment.logger,
-    )
+    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
+        MviScaffoldingProcessor(
+            codeGenerator = environment.codeGenerator,
+            logger = environment.logger,
+        )
 }

@@ -24,7 +24,7 @@ import kotlin.reflect.KClass
 annotation class MviScreen(
     val uiState: KClass<*>,
     val intent: KClass<*>,
-    val platform: Platform = Platform.ANDROID
+    val platform: Platform = Platform.ANDROID,
 )
 
 /**
@@ -33,5 +33,5 @@ annotation class MviScreen(
  */
 enum class Platform {
     /** Generates code for Android, including `ViewModel`, `ViewModelProvider.Factory`, and `NavGraphBuilder` extensions. */
-    ANDROID
+    ANDROID,
 }

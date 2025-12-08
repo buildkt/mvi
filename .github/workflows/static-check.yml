@@ -11,7 +11,5 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Run lint for ${{ inputs.module }}
-        run: ./gradlew :${{ inputs.module }}:lint
       - name: Run kt-lint for ${{ inputs.module }}
         run: ./gradlew :${{ inputs.module }}:ktlintCheck

@@ -28,4 +28,8 @@ include(":mvi-android")
 include(":mvi-annotation")
 include(":mvi-annotation-processor")
 
+include(":samples:address")
+include(":samples:design-system")
+include(":samples:restaurants")
+
 include(":sample-app")
