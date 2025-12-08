@@ -6,7 +6,7 @@ plugins {
 
 val artifactId = "annotation"
 group = "com.buildkt.mvi"
-version = "0.1.0"
+version = "0.1.1"
 
 kotlin {
     jvmToolchain(jdkVersion = 11)

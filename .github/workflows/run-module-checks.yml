@@ -51,7 +51,7 @@ jobs:
             // MANUAL MODULE CONFIGURATION - The Single Source of Truth
             // =================================================================
             const modulesWithUnitTests = [ "core/mvi/core", "core/mvi/android" ];
-            const modulesWithStaticChecks = [ "core/mvi/core", "core/mvi/android", "core/design-system", "samples/address", "samples/product" ];
+            const modulesWithStaticChecks = [ "mvi-android", "mvi-annotation", "mvi-annotation-processor", "mvi-core" ];
             // =================================================================
 
             const changedFiles = `${{ steps.changed-files.outputs.changed_files }}`.split('\n').filter(f => f);
