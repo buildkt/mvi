@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.compose.shimmer)
     implementation(libs.hilt.navigation.compose)
 
