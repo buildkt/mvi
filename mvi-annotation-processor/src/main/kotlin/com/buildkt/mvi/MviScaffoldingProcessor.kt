@@ -171,7 +171,8 @@ class MviScaffoldingProcessor(
         val uiEventsParam = parameters["uiEvents"]
         val expectedUiEventsType = MEMBER_FLOW.parameterizedBy(MEMBER_UI_EVENT)
         if (uiEventsParam == null) {
-            logger.error("Function '$functionName' annotated with @MviScreen must have a 'uiEvents' parameter.", paneFunction)
+            // It's optional, so we just warn the user.
+            logger.warn("Function '$functionName' annotated with @MviScreen does not have a 'uiEvents' parameter. One-shot UI events will not be collected.", paneFunction)
         } else if (uiEventsParam.type.toTypeName() != expectedUiEventsType) {
             logger.error(
                 "Parameter 'uiEvents' in '$functionName' is of the wrong type. Expected: $expectedUiEventsType, Found: ${uiEventsParam.type.toTypeName()}",
@@ -460,7 +461,11 @@ class MviScaffoldingProcessor(
         val composableArgs = mutableListOf<String>()
         composableArgs.add("state = state")
         composableArgs.add("onIntent = viewModel::onIntent")
-        composableArgs.add("uiEvents = viewModel.uiEvents")
+
+        val hasUiEventsParam = paneFunction.parameters.any { it.name?.asString() == "uiEvents" }
+        if (hasUiEventsParam) {
+            composableArgs.add("uiEvents = viewModel.uiEvents")
+        }
 
         navArguments.forEach { navArg ->
             val argName = navArg.name

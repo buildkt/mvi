@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
+import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import coil3.compose.AsyncImage
@@ -47,9 +48,8 @@ import com.buildkt.material3.components.TextStyle
 import com.buildkt.material3.components.TopAppBar
 import com.buildkt.material3.tokens.spacers
 import com.buildkt.mvi.MviScreen
-import com.buildkt.mvi.android.UiEvent
 import com.valentinilk.shimmer.shimmer
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 @MviScreen(
@@ -59,7 +59,6 @@ import kotlinx.coroutines.flow.Flow
 fun RestaurantsPane(
     state: RestaurantsUiState,
     onIntent: (intent: RestaurantsIntent) -> Unit,
-    uiEvents: Flow<UiEvent>,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(true) { onIntent(RestaurantsIntent.PaneLaunched) }
@@ -226,24 +225,24 @@ private fun Modifier.placeholder(
 @Preview(showBackground = true, name = "Restaurants Pane Loaded")
 @Composable
 private fun RestaurantsPanePreview() {
-//    ExtendedMaterialTheme {
-//        val fakeRestaurants = flowOf(
-//            PagingData.from(
-//                listOf(
-//                    RestaurantInfo("1", "Subway", "url", "€0.99 Delivery Fee", "4.4 (490+)", "10 min"),
-//                    RestaurantInfo("2", "Bubble House", "url", "€1.49 Delivery Fee", "4.0 (10)", "18 min")
-//                )
-//            )
-//        )
-//        RestaurantsPane(state = RestaurantsUiState(restaurants = fakeRestaurants), onIntent = {})
-//    }
+    ExtendedMaterialTheme {
+        val fakeRestaurants = flowOf(
+            PagingData.from(
+                listOf(
+                    RestaurantInfo("1", "Subway", "url", "€0.99 Delivery Fee", "4.4 (490+)", "10 min"),
+                    RestaurantInfo("2", "Bubble House", "url", "€1.49 Delivery Fee", "4.0 (10)", "18 min")
+                )
+            )
+        )
+        RestaurantsPane(state = RestaurantsUiState(restaurants = fakeRestaurants), onIntent = {})
+    }
 }
 
 @Preview(showBackground = true, name = "Restaurants Pane Loading")
 @Composable
 private fun RestaurantsPaneLoadingPreview() {
     ExtendedMaterialTheme {
-        //val loadingRestaurants = flowOf(PagingData.empty<RestaurantInfo>(LoadState.Loading))
-        //RestaurantsPane(state = RestaurantsUiState(restaurants = loadingRestaurants), onIntent = {})
+        val loadingRestaurants = flowOf(value = PagingData.empty<RestaurantInfo>())
+        RestaurantsPane(state = RestaurantsUiState(restaurants = loadingRestaurants), onIntent = {})
     }
 }

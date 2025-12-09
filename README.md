@@ -45,10 +45,10 @@ plugins {
 
 dependencies {
     // MVI Android 
-    implementation("com.buildkt.mvi:android:0.1.1")
+    implementation("com.buildkt.mvi:android:<latest>")
     
     // KSP Annotation Processor
-    ksp("com.buildkt.mvi:annotation-processor:0.1.1")
+    ksp("com.buildkt.mvi:annotation-processor:<latest>")
 }
 ```
 
@@ -69,7 +69,9 @@ sealed interface ProfileIntent {
 ```
 
 2. Create your Composable Pane and Annotate It
-Annotate your Composable with `@MviScreen` and mark any Intent that triggers asynchronous work with `@TriggersSideEffect`.
+Annotate your Composable with `@MviScreen`. The only required parameters are `state` and `onIntent`. 
+The `uiEvents` parameter for collecting one-shot events is **optional**.
+
 ```kotlin
 sealed class ProfileIntent {
     @TriggersSideEffect
@@ -84,12 +86,18 @@ sealed class ProfileIntent {
 fun ProfilePane(
     state: ProfileUiState,
     onIntent: (ProfileIntent) -> Unit,
-    // ... other collectors ...
+    uiEvents: Flow<UiEvent>, // Optional. Use with `CollectUiEvents()` to handle one-shot events, like showing a toast.
+    modifier: Modifier = Modifier,
 ) {
-    if (state.isLoading) {
-        CircularProgressIndicator()
-    } else {
-        Text("Hello, ${state.userName}!")
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectUiEvents(uiEvents, snackbarHostState)
+
+    ScreenScaffold(
+      modifier = modifier,
+      isLoading = state.isLoading,
+      snackbarHostState = snackbarHostState,
+    ) {
+      Text("Hello world!")
     }
 }
 ```

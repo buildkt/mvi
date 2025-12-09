@@ -26,9 +26,6 @@ import com.buildkt.material3.components.TextStyle
 import com.buildkt.material3.tokens.spacers
 import com.buildkt.mvi.MviScreen
 import com.buildkt.mvi.NavArgument
-import com.buildkt.mvi.android.UiEvent
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 @MviScreen(
@@ -39,7 +36,6 @@ fun EditAddressPane(
     @NavArgument addressId: Long,
     state: EditAddressUiState,
     onIntent: (EditAddressIntent) -> Unit,
-    uiEvents: Flow<UiEvent>,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(addressId) {
@@ -154,6 +150,5 @@ private fun Preview() =
                     country = "Netherlands",
                 ),
             onIntent = { },
-            uiEvents = emptyFlow(),
         )
     }
