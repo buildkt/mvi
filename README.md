@@ -62,9 +62,11 @@ data class ProfileUiState(
     val userName: String = ""
 )
 
-sealed interface ProfileIntent {
-    data object OnRetryClicked : ProfileIntent
-    data class OnUserNameLoaded(val name: String) : ProfileIntent
+sealed class ProfileIntent {
+  @TriggersSideEffect
+  data object LoadUserName : ProfileIntent
+
+  data class OnLoadUserNameLoaded(val userName: String) : ProfileIntent
 }
 ```
 
@@ -73,11 +75,6 @@ Annotate your Composable with `@MviScreen`. The only required parameters are `st
 The `uiEvents` parameter for collecting one-shot events is **optional**.
 
 ```kotlin
-sealed class ProfileIntent {
-    @TriggersSideEffect
-    data object LoadUserName : ProfileIntent   
-}
-
 @MviScreen(
     uiState = ProfileUiState::class,
     intent = ProfileIntent::class
@@ -91,6 +88,8 @@ fun ProfilePane(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     CollectUiEvents(uiEvents, snackbarHostState)
+
+    LaunchedEffect(true) { onIntent(ProfileIntent.LoadUserName) }
 
     ScreenScaffold(
       modifier = modifier,
@@ -108,13 +107,15 @@ The processor generates an extension function for `NavGraphBuilder`. Use it to d
 NavHost(navController, startDestination = "profile") {
     // KSP-generated function
     profilePane(navController = navController, route = "profile") {
-        reducer = { state, intent ->
+        // Inject a reducer to update the state
+        reducer = Reducer { state, intent ->
             when (intent) {
-                is OnUserNameLoaded -> state.copy(isLoading = false, userName = intent.name)
-                else -> state
+                is LoadUserName -> state.copy(isLoading = true)
+                is OnLoadUserNameLoaded -> state.copy(isLoading = false, userName = intent.name)
             }
         }
-        
+
+        // Inject the side effects triggered by an Intent  
         sideEffects {
             loadUserName = sideEffect {
                 delay(2000)  // Simulate an API call
