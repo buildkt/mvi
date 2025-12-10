@@ -45,10 +45,10 @@ plugins {
 
 dependencies {
     // MVI Android 
-    implementation("com.buildkt.mvi:android:0.1.1")
+    implementation("com.buildkt.mvi:android:<latest>")
     
     // KSP Annotation Processor
-    ksp("com.buildkt.mvi:annotation-processor:0.1.1")
+    ksp("com.buildkt.mvi:annotation-processor:<latest>")
 }
 ```
 
@@ -62,20 +62,19 @@ data class ProfileUiState(
     val userName: String = ""
 )
 
-sealed interface ProfileIntent {
-    data object OnRetryClicked : ProfileIntent
-    data class OnUserNameLoaded(val name: String) : ProfileIntent
+sealed class ProfileIntent {
+  @TriggersSideEffect
+  data object LoadUserName : ProfileIntent
+
+  data class OnLoadUserNameLoaded(val userName: String) : ProfileIntent
 }
 ```
 
 2. Create your Composable Pane and Annotate It
-Annotate your Composable with `@MviScreen` and mark any Intent that triggers asynchronous work with `@TriggersSideEffect`.
-```kotlin
-sealed class ProfileIntent {
-    @TriggersSideEffect
-    data object LoadUserName : ProfileIntent   
-}
+Annotate your Composable with `@MviScreen`. The only required parameters are `state` and `onIntent`. 
+The `uiEvents` parameter for collecting one-shot events is **optional**.
 
+```kotlin
 @MviScreen(
     uiState = ProfileUiState::class,
     intent = ProfileIntent::class
@@ -84,12 +83,20 @@ sealed class ProfileIntent {
 fun ProfilePane(
     state: ProfileUiState,
     onIntent: (ProfileIntent) -> Unit,
-    // ... other collectors ...
+    uiEvents: Flow<UiEvent>, // Optional. Use with `CollectUiEvents()` to handle one-shot events, like showing a toast.
+    modifier: Modifier = Modifier,
 ) {
-    if (state.isLoading) {
-        CircularProgressIndicator()
-    } else {
-        Text("Hello, ${state.userName}!")
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectUiEvents(uiEvents, snackbarHostState)
+
+    LaunchedEffect(true) { onIntent(ProfileIntent.LoadUserName) }
+
+    ScreenScaffold(
+      modifier = modifier,
+      isLoading = state.isLoading,
+      snackbarHostState = snackbarHostState,
+    ) {
+      Text("Hello world!")
     }
 }
 ```
@@ -100,13 +107,15 @@ The processor generates an extension function for `NavGraphBuilder`. Use it to d
 NavHost(navController, startDestination = "profile") {
     // KSP-generated function
     profilePane(navController = navController, route = "profile") {
-        reducer = { state, intent ->
+        // Inject a reducer to update the state
+        reducer = Reducer { state, intent ->
             when (intent) {
-                is OnUserNameLoaded -> state.copy(isLoading = false, userName = intent.name)
-                else -> state
+                is LoadUserName -> state.copy(isLoading = true)
+                is OnLoadUserNameLoaded -> state.copy(isLoading = false, userName = intent.name)
             }
         }
-        
+
+        // Inject the side effects triggered by an Intent  
         sideEffects {
             loadUserName = sideEffect {
                 delay(2000)  // Simulate an API call

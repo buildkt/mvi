@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history so we can compare with the last tag
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -21,11 +23,53 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Assemble
-        run: ./gradlew assemble
+      - name: Identify Last Tag and Changed Modules
+        id: changed_modules
+        run: |
+          # Get the latest tag. If it's the very first release, this might be empty.
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "Latest tag is: $LATEST_TAG"
 
-      - name: Publish to MavenCentral
-        run: ./gradlew publishToMavenCentral --no-configuration-cache
+          # List of all modules that can be published
+          ALL_MODULES="mvi-core mvi-annotation mvi-android mvi-annotation-processor"
+          
+          # Find changed files since the last tag
+          # If LATEST_TAG is empty, this will list all files, which is what we want for a first release.
+          CHANGED_FILES=$(git diff --name-only HEAD $LATEST_TAG)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          ASSEMBLE_COMMANDS=""
+          PUBLISH_COMMANDS=""
+          for MODULE in $ALL_MODULES; do
+            # Check if any changed file path contains the module's directory name
+            if echo "$CHANGED_FILES" | grep -q "$MODULE/"; then
+              echo "$MODULE has changed. Adding to build and publish lists."
+              ASSEMBLE_COMMANDS="$ASSEMBLE_COMMANDS :$MODULE:assemble"
+              PUBLISH_COMMANDS="$PUBLISH_COMMANDS :$MODULE:publishToMavenCentral"
+            else
+              echo "$MODULE has NOT changed. Skipping."
+            fi
+          done
+
+          if [ -z "$PUBLISH_COMMANDS" ]; then
+            echo "No changed modules detected. Nothing to build or publish."
+          else
+            echo "Assemble commands to run: $ASSEMBLE_COMMANDS"
+            echo "Publish commands to run: $PUBLISH_COMMANDS"
+          fi
+          
+          # Set the outputs for the next steps
+          echo "assemble_commands=$ASSEMBLE_COMMANDS" >> $GITHUB_OUTPUT
+          echo "publish_commands=$PUBLISH_COMMANDS" >> $GITHUB_OUTPUT
+
+      - name: Assemble Changed Modules
+        if: steps.changed_modules.outputs.assemble_commands != ''
+        run: ./gradlew ${{ steps.changed_modules.outputs.assemble_commands }}
+
+      - name: Publish Changed Modules to MavenCentral
+        if: steps.changed_modules.outputs.publish_commands != ''
+        run: ./gradlew ${{ steps.changed_modules.outputs.publish_commands }} --no-configuration-cache
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
