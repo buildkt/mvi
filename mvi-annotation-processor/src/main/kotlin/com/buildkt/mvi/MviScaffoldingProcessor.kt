@@ -172,7 +172,10 @@ class MviScaffoldingProcessor(
         val expectedUiEventsType = MEMBER_FLOW.parameterizedBy(MEMBER_UI_EVENT)
         if (uiEventsParam == null) {
             // It's optional, so we just warn the user.
-            logger.warn("Function '$functionName' annotated with @MviScreen does not have a 'uiEvents' parameter. One-shot UI events will not be collected.", paneFunction)
+            logger.warn(
+                "Function '$functionName' annotated with @MviScreen does not have a 'uiEvents' parameter. One-shot UI events will not be collected.",
+                paneFunction,
+            )
         } else if (uiEventsParam.type.toTypeName() != expectedUiEventsType) {
             logger.error(
                 "Parameter 'uiEvents' in '$functionName' is of the wrong type. Expected: $expectedUiEventsType, Found: ${uiEventsParam.type.toTypeName()}",
