@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
  * @param UiEvent The type representing transient, one-shot UI events (e.g., showing a Snackbar).
  */
 interface StateHolder<State, Intent, NavEvent, UiEvent> {
-
     /**
      * A hot [kotlinx.coroutines.flow.Flow] that emits one-shot navigation events.
      * It is designed to be collected by a UI coordinator responsible for navigation to ensure
@@ -83,8 +82,7 @@ class StateHolderImpl<State, Intent : Any, NavEvent, UiEvent>(
     private val sideEffects: SideEffectMap<State, Intent>,
     private val coroutineScope: CoroutineScope,
     private val middlewares: List<Middleware<State, Intent>> = emptyList(),
-): StateHolder<State, Intent, NavEvent, UiEvent> {
-
+) : StateHolder<State, Intent, NavEvent, UiEvent> {
     /**
      * A hot flow for emitting one-shot navigation events.
      *

@@ -3,10 +3,10 @@ package com.buildkt.mvi.android
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buildkt.mvi.Middleware
-import com.buildkt.mvi.StateHolder
-import com.buildkt.mvi.StateHolderImpl
 import com.buildkt.mvi.Reducer
 import com.buildkt.mvi.SideEffectMap
+import com.buildkt.mvi.StateHolder
+import com.buildkt.mvi.StateHolderImpl
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -31,15 +31,16 @@ abstract class ViewModel<State, Intent : Any>(
     private val reducer: Reducer<State, Intent>,
     private val sideEffects: SideEffectMap<State, Intent>,
     private val middlewares: List<Middleware<State, Intent>>,
-) : ViewModel(), StateHolder<State, Intent, NavigationEvent, UiEvent> {
-
-    private val stateHolder = StateHolderImpl<State, Intent, NavigationEvent, UiEvent>(
-        initialState = initialState,
-        reducer = reducer,
-        sideEffects = sideEffects,
-        coroutineScope = viewModelScope,
-        middlewares = middlewares,
-    )
+) : ViewModel(),
+    StateHolder<State, Intent, NavigationEvent, UiEvent> {
+    private val stateHolder =
+        StateHolderImpl<State, Intent, NavigationEvent, UiEvent>(
+            initialState = initialState,
+            reducer = reducer,
+            sideEffects = sideEffects,
+            coroutineScope = viewModelScope,
+            middlewares = middlewares,
+        )
 
     override val navigationEvents: SharedFlow<NavigationEvent> = stateHolder.navigationEvents
 
