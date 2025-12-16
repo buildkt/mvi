@@ -7,7 +7,7 @@ plugins {
 
 val artifactId = "android"
 group = "com.buildkt.mvi"
-version = "0.1.1"
+version = "0.1.2"
 
 android {
     namespace = "com.buildkt.mvi.android"

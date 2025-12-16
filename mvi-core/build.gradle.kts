@@ -6,7 +6,7 @@ plugins {
 
 val artifactId = "core"
 group = "com.buildkt.mvi"
-version = "0.1.1"
+version = "0.2.0"
 
 android {
     namespace = "com.buildkt.mvi"
