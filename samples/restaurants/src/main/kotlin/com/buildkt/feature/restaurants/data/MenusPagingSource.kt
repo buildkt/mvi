@@ -15,7 +15,7 @@ class MenusPagingSource(
 
         return try {
             LoadResult.Page(
-                data = MockMenus(restaurantId),
+                data = menuMocks(restaurantId),
                 prevKey = if (currentPage == 1) null else currentPage - 1,
                 nextKey = currentPage + 1
             )
@@ -27,7 +27,7 @@ class MenusPagingSource(
     override fun getRefreshKey(state: PagingState<Int, MenuItem>): Int? = state.anchorPosition
 }
 
-private fun MockMenus(restaurantId: Int) = listOf(
+private fun menuMocks(restaurantId: Int) = listOf(
     MenuItem("$restaurantId-1", "Fried mandu veggies", "Delicious crispy Korean dumplings with a vegetable filling. 6 pieces.", "€4.96", "€6.20", "url", listOf("20% OFF")),
     MenuItem("$restaurantId-2", "(Veg) Gochu NoChicken Coleslaw Bun", "Discover the flavors of Korea. Featuring a veggie NoChicken burger, gochujang may...", "€11.92", "€14.90", "url", listOf("(Veg)", "20% OFF")),
     MenuItem("$restaurantId-3", "(Veg) Kimchi NoChicken Cheese Bun", "A crispy veggie NoChicken burger coated in your choice of coating, gochujang may...", "€13.44", "€16.80", "url", listOf("(Veg)", "20% OFF")),
