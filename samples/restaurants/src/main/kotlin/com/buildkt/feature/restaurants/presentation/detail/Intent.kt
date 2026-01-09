@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 sealed interface RestaurantDetailIntent {
     @TriggersSideEffect
-    data class PaneLaunched(val restaurantId: String) : RestaurantDetailIntent
+    data class PaneLaunched(val restaurantId: Int) : RestaurantDetailIntent
     @TriggersSideEffect
     data object BackClicked : RestaurantDetailIntent
     @TriggersSideEffect

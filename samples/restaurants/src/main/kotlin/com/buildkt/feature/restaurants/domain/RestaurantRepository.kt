@@ -17,10 +17,10 @@ interface RestaurantRepository {
     /**
      * Fetches the detailed information for a specific restaurant.
      */
-    suspend fun getRestaurantInfo(restaurantId: String): RestaurantInfo
+    suspend fun getRestaurantInfo(restaurantId: Int): RestaurantInfo
 
     /**
      * Fetches a paginated stream of menu items for a specific restaurant.
      */
-    fun getRestaurantMenus(restaurantId: String): Flow<PagingData<MenuItem>>
+    fun getRestaurantMenus(restaurantId: Int): Flow<PagingData<MenuItem>>
 }

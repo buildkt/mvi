@@ -51,7 +51,7 @@ import kotlinx.coroutines.flow.Flow
     intent = RestaurantDetailIntent::class
 )
 fun RestaurantDetailPane(
-    @NavArgument restaurantId: String,
+    @NavArgument restaurantId: Int,
     state: RestaurantDetailUiState,
     onIntent: (RestaurantDetailIntent) -> Unit,
     uiEvents: Flow<UiEvent>,
