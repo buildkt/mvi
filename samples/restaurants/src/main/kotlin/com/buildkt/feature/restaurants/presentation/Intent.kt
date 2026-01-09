@@ -11,6 +11,6 @@ sealed interface RestaurantsIntent {
     @TriggersSideEffect
     class LoadRestaurants(val restaurants: Flow<PagingData<RestaurantInfo>>) : RestaurantsIntent
     @TriggersSideEffect
-    data class RestaurantSelected(val restaurantId: String) : RestaurantsIntent
+    data class RestaurantSelected(val restaurantId: Int) : RestaurantsIntent
 }
 

@@ -229,8 +229,8 @@ private fun RestaurantsPanePreview() {
         val fakeRestaurants = flowOf(
             PagingData.from(
                 listOf(
-                    RestaurantInfo("1", "Subway", "url", "€0.99 Delivery Fee", "4.4 (490+)", "10 min"),
-                    RestaurantInfo("2", "Bubble House", "url", "€1.49 Delivery Fee", "4.0 (10)", "18 min")
+                    RestaurantInfo(1, "Subway", "url", "€0.99 Delivery Fee", "4.4 (490+)", "10 min"),
+                    RestaurantInfo(2, "Bubble House", "url", "€1.49 Delivery Fee", "4.0 (10)", "18 min")
                 )
             )
         )

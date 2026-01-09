@@ -37,7 +37,7 @@ class RestaurantsPagingSource : PagingSource<Int, RestaurantInfo>() {
         val id = (currentPage - 1) * params.loadSize + it
 
         RestaurantInfo(
-            id = id.toString(),
+            id = id,
             name = "Restaurant #$id",
             deliveryInfo = "€0 Delivery Fee • Uber One • 1.9 km",
             deliveryTime = "${10 + (id % 20)} min",

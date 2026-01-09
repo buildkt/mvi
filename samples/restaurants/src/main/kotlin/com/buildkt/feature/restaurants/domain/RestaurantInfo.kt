@@ -1,9 +1,7 @@
 package com.buildkt.feature.restaurants.domain
 
-import java.util.UUID
-
 data class RestaurantInfo(
-    val id: String = UUID.randomUUID().toString(),
+    val id: Int = Int.MAX_VALUE,
     val name: String = "",
     val rating: String = "",
     val reviewCount: String = "",

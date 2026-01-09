@@ -5,7 +5,7 @@ plugins {
 }
 val artifactId = "annotation-processor"
 group = "com.buildkt.mvi"
-version = "0.1.2"
+version = "0.1.3"
 
 kotlin {
     jvmToolchain(jdkVersion = 11)

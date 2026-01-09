@@ -53,9 +53,9 @@ fun NavGraphBuilder.restaurantsFlowNavigation(
     }
 }
 
-const val RESTAURANTS_FLOW_ROUTE = "restaurants"
+const val RESTAURANTS_FLOW_ROUTE = "restaurant"
 
-private const val LISTING_PANE_ROUTE = "restaurants/listing"
-private const val DETAIL_PANE_ROUTE = "restaurants/detail?restaurantId={restaurantId}"
+private const val LISTING_PANE_ROUTE = "restaurant/listing"
+private const val DETAIL_PANE_ROUTE = "restaurant?restaurantId={restaurantId}"
 
-private fun detailPaneRoute(restaurantId: String) = DETAIL_PANE_ROUTE.replace("{restaurantId}", restaurantId)
+private fun detailPaneRoute(restaurantId: Int) = DETAIL_PANE_ROUTE.replace(oldValue = "{restaurantId}", newValue = restaurantId.toString())

@@ -16,7 +16,7 @@ class RestaurantRepositoryImpl : RestaurantRepository {
         pagingSourceFactory = { RestaurantsPagingSource() }
     ).flow
 
-    override suspend fun getRestaurantInfo(restaurantId: String): RestaurantInfo {
+    override suspend fun getRestaurantInfo(restaurantId: Int): RestaurantInfo {
         delay(timeMillis = 2000) // Simulate network latency
 
         return RestaurantInfo(
@@ -32,7 +32,7 @@ class RestaurantRepositoryImpl : RestaurantRepository {
         )
     }
 
-    override fun getRestaurantMenus(restaurantId: String): Flow<PagingData<MenuItem>> = Pager(
+    override fun getRestaurantMenus(restaurantId: Int): Flow<PagingData<MenuItem>> = Pager(
         config = PagingConfig(pageSize = 20, enablePlaceholders = false),
         pagingSourceFactory = { MenusPagingSource(restaurantId = restaurantId) }
     ).flow

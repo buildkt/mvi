@@ -450,10 +450,10 @@ class MviScaffoldingProcessor(
 
                 when (typeName) {
                     STRING -> """val $name = backStackEntry.arguments?.getString("$name")!!"""
-                    LONG -> """val $name = backStackEntry.arguments?.getLong("$name") ?: 0L"""
-                    INT -> """val $name = backStackEntry.arguments?.getInt("$name") ?: 0"""
-                    BOOLEAN -> """val $name = backStackEntry.arguments?.getBoolean("$name") ?: false"""
-                    FLOAT -> """val $name = backStackEntry.arguments?.getFloat("$name") ?: 0f"""
+                    LONG -> """val $name = backStackEntry.arguments?.getString("$name")?.toLongOrNull() ?: error("'$name' argument must be Long")"""
+                    INT -> """val $name = backStackEntry.arguments?.getString("$name")?.toIntOrNull() ?: error("'$name' argument must be Int")"""
+                    BOOLEAN -> """val $name = backStackEntry.arguments?.getString("$name")?.toBoolean() ?: error("'$name' argument must be Boolean")"""
+                    FLOAT -> """val $name = backStackEntry.arguments?.toFloatOrNull() ?: error("'$name' argument must be Float")"""
                     else -> {
                         logger.warn("Unsupported NavArgument type '$typeName' for '$name'.Mapping as Parcelable.")
                         """    val $name: $typeName = backStackEntry.arguments?.getParcelable("$name")!!"""
