@@ -23,8 +23,8 @@ import com.buildkt.feature.address.presentation.listing.AddressListIntent
 import com.buildkt.feature.address.presentation.listing.addressListPane
 import com.buildkt.feature.address.presentation.listing.addressListReducer
 import com.buildkt.feature.address.presentation.listing.loadAddresses
-import com.buildkt.mvi.android.LogMiddleware
 import com.buildkt.mvi.android.NavigationEvent
+import com.buildkt.mvi.android.logMiddleware
 import com.buildkt.mvi.android.navigate
 import com.buildkt.mvi.android.routeTo
 import com.buildkt.mvi.android.showToast
@@ -38,7 +38,9 @@ fun NavGraphBuilder.addressFlowNavigation(
     startDestination = LISTING_PANE_ROUTE,
 ) {
     addressListPane(navController, route = LISTING_PANE_ROUTE) {
-        middlewares += LogMiddleware()
+        timeTravelDebugging {
+            enable = true
+        }
 
         reducer = addressListReducer()
 
@@ -63,7 +65,7 @@ fun NavGraphBuilder.addressFlowNavigation(
     }
 
     createAddressPane(navController, route = CREATE_PANE_ROUTE) {
-        middlewares += LogMiddleware()
+        middlewares += logMiddleware()
 
         reducer = createAddressReducer()
 
@@ -82,7 +84,7 @@ fun NavGraphBuilder.addressFlowNavigation(
     }
 
     editAddressPane(navController, route = EDIT_PANE_ROUTE) {
-        middlewares += LogMiddleware()
+        middlewares += logMiddleware()
 
         reducer = editAddressReducer()
 

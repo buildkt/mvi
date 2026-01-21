@@ -72,36 +72,19 @@ fun AddressListPane(
             )
         },
     ) { paddingValues ->
-        val addresses by state.addresses.collectAsState(initial = emptyList())
+        // Use null as initial so we can distinguish "flow not yet emitted" from "emitted empty list".
+        // Otherwise we'd briefly show EmptyState when isLoading becomes false but the flow hasn't emitted.
+        val addresses by state.addresses.collectAsState(initial = null)
 
         when {
             state.isLoading -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    userScrollEnabled = false,
-                ) {
-                    item {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .padding(
-                                        horizontal = MaterialTheme.spacers.medium,
-                                        vertical = MaterialTheme.spacers.medium,
-                                    ).fillMaxWidth(fraction = 0.4f)
-                                    .height(height = 24.dp)
-                                    .placeholder(),
-                        )
-                    }
-                    items(count = 4) {
-                        ListItemPlaceholder()
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            modifier = Modifier.padding(start = 56.dp, end = 16.dp),
-                        )
-                    }
-                }
+                LazyColumnWithPlaceholders(modifier = Modifier.fillMaxSize().padding(paddingValues))
             }
-            addresses.isEmpty() -> {
+            addresses == null -> {
+                // Flow not yet emitted; show loading skeleton to avoid flashing EmptyState.
+                LazyColumnWithPlaceholders(modifier = Modifier.fillMaxSize().padding(paddingValues))
+            }
+            addresses!!.isEmpty() -> {
                 EmptyState(
                     title = "No addresses yet",
                     description = "When you add a new address, it will appear here.",
@@ -110,32 +93,11 @@ fun AddressListPane(
                 )
             }
             else -> {
-                LazyColumn(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                ) {
-                    item {
-                        Text(
-                            text = "Saved addresses",
-                            style = TextStyle.Title,
-                            modifier = Modifier.padding(all = MaterialTheme.spacers.medium),
-                        )
-                    }
-                    items(items = addresses) { address ->
-                        // TODO key = { it.address.id }
-                        AddressItemRow(
-                            address = address,
-                            onAddressClicked = { onIntent(AddressListIntent.AddressSelected(addressId = address.address.id)) },
-                            onEditClicked = { onIntent(AddressListIntent.EditAddress(addressId = address.address.id)) },
-                        )
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            modifier = Modifier.padding(start = 56.dp, end = 16.dp),
-                        )
-                    }
-                }
+                LazyColumnWithAddresses(
+                    onIntent = onIntent,
+                    addresses = addresses!!,
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                )
             }
         }
     }
@@ -184,6 +146,65 @@ private fun AddressItemRow(
             )
         },
     )
+}
+
+@Composable
+private fun LazyColumnWithAddresses(
+    onIntent: (AddressListIntent) -> Unit,
+    addresses: List<AddressListUiState.AddressItem>,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(modifier = modifier) {
+        item {
+            Text(
+                text = "Saved addresses",
+                style = TextStyle.Title,
+                modifier = Modifier.padding(all = MaterialTheme.spacers.medium),
+            )
+        }
+        items(items = addresses) { address ->
+            // TODO key = { it.address.id }
+            AddressItemRow(
+                address = address,
+                onAddressClicked = { onIntent(AddressListIntent.AddressSelected(addressId = address.address.id)) },
+                onEditClicked = { onIntent(AddressListIntent.EditAddress(addressId = address.address.id)) },
+            )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.padding(start = 56.dp, end = 16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LazyColumnWithPlaceholders(
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier,
+        userScrollEnabled = false,
+    ) {
+        item {
+            Box(
+                modifier =
+                    Modifier
+                        .padding(
+                            horizontal = MaterialTheme.spacers.medium,
+                            vertical = MaterialTheme.spacers.medium,
+                        ).fillMaxWidth(fraction = 0.4f)
+                        .height(height = 24.dp)
+                        .placeholder(),
+            )
+        }
+        items(count = 6) {
+            ListItemPlaceholder()
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.padding(start = 56.dp, end = 16.dp),
+            )
+        }
+    }
 }
 
 @Preview(name = "Loaded State")

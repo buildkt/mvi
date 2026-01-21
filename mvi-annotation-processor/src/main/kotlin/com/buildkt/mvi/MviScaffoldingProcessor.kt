@@ -19,7 +19,6 @@ import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.LONG
 import com.squareup.kotlinpoet.LambdaTypeName
-import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
@@ -86,7 +85,15 @@ class MviScaffoldingProcessor(
                             sideEffectMapClassName,
                             configClassName,
                         )
-                    generateNavigationForPane(paneFunction, viewModelClassName, factoryClassName, configClassName, navArguments)
+                    generateNavigationForPane(
+                        paneFunction,
+                        viewModelClassName,
+                        factoryClassName,
+                        configClassName,
+                        uiStateDeclaration,
+                        intentDeclaration,
+                        navArguments,
+                    )
                 } catch (e: Exception) {
                     logger.error(
                         "Failed to process @MviScreen on ${paneFunction.simpleName.asString()}: ${e.stackTraceToString()}",
@@ -305,6 +312,19 @@ class MviScaffoldingProcessor(
                         .build(),
                 ).addProperty(
                     PropertySpec
+                        .builder("initialState", uiStateTypeName.copy(nullable = true))
+                        .mutable(true)
+                        .initializer("null")
+                        .build(),
+                ).addFunction(
+                    FunSpec
+                        .builder("initialState")
+                        .addModifiers(KModifier.PUBLIC)
+                        .addParameter("state", uiStateTypeName)
+                        .addStatement("this.initialState = state")
+                        .build(),
+                ).addProperty(
+                    PropertySpec
                         .builder("middlewares", middlewareListType)
                         .initializer("mutableListOf()")
                         .build(),
@@ -320,6 +340,35 @@ class MviScaffoldingProcessor(
                         ).addStatement("val builder = %T()", sideEffectBuilderClassName)
                         .addStatement("builder.block()")
                         .addStatement("this.sideEffects = %T($sideEffectsRouterArgs)", sideEffectMapClassName)
+                        .build(),
+                ).addProperty(
+                    PropertySpec
+                        .builder(
+                            "timeTravelDebugging",
+                            ClassName("com.buildkt.mvi", "TimeTravelDebuggerConfig")
+                                .parameterizedBy(uiStateTypeName, intentTypeName)
+                                .copy(nullable = true),
+                        ).mutable(mutable = true)
+                        .initializer("null")
+                        .build(),
+                ).addFunction(
+                    FunSpec
+                        .builder("timeTravelDebugging")
+                        .addModifiers(KModifier.PUBLIC)
+                        .addParameter(
+                            "block",
+                            LambdaTypeName.get(
+                                receiver =
+                                    ClassName("com.buildkt.mvi", "TimeTravelDebuggerConfig")
+                                        .parameterizedBy(uiStateTypeName, intentTypeName),
+                                returnType = UNIT,
+                            ),
+                        ).addStatement(
+                            "timeTravelDebugging = %T<%T, %T>().apply(block)",
+                            ClassName("com.buildkt.mvi", "TimeTravelDebuggerConfig"),
+                            uiStateTypeName,
+                            intentTypeName,
+                        ).addStatement("timeTravelDebugging?.createMiddleware()?.let { middleware -> middlewares += middleware }")
                         .build(),
                 ).addProperty(
                     PropertySpec
@@ -359,49 +408,79 @@ class MviScaffoldingProcessor(
         val uiState = uiStateDeclaration.toClassName()
         val intent = intentDeclaration.toClassName()
 
-        val viewModelSuperClass = MEMBER_MVI_VIEWMODEL.parameterizedBy(uiState, intent)
         val reducerInterface = MEMBER_REDUCER.parameterizedBy(uiState, intent)
         val middlewareListType = List::class.asClassName().parameterizedBy(MEMBER_MIDDLEWARE.parameterizedBy(uiState, intent))
+        val reducerType = MEMBER_REDUCER.parameterizedBy(uiState, intent)
+
+        val androidViewModelClassName =
+            ClassName("com.buildkt.mvi.android", "ViewModel")
+                .parameterizedBy(uiState, intent)
 
         val viewModelClass =
             TypeSpec
                 .classBuilder(viewModelClassName)
-                .superclass(viewModelSuperClass)
+                .addModifiers(KModifier.PUBLIC)
+                .superclass(androidViewModelClassName)
                 .primaryConstructor(
                     FunSpec
                         .constructorBuilder()
-                        .addParameter("reducer", reducerInterface)
+                        .addParameter("initialState", uiState)
+                        .addParameter("reducer", reducerType)
                         .addParameter("sideEffects", sideEffectMapClassName)
                         .addParameter("middlewares", middlewareListType)
                         .build(),
-                ).addSuperclassConstructorParameter("initialState = %T()", uiState)
+                ).addSuperclassConstructorParameter("initialState = initialState")
                 .addSuperclassConstructorParameter("reducer = reducer")
                 .addSuperclassConstructorParameter("sideEffects = sideEffects")
                 .addSuperclassConstructorParameter("middlewares = middlewares")
                 .build()
 
         val factoryClassName = ClassName(packageName, "${viewModelName}Factory")
+
         val factoryClass =
             TypeSpec
                 .classBuilder(factoryClassName)
+                .addModifiers(KModifier.PUBLIC)
                 .addSuperinterface(superinterface = MEMBER_VIEW_MODEL_PROVIDER_FACTORY)
-                .primaryConstructor(FunSpec.constructorBuilder().addParameter("config", configClassName).build())
-                .addProperty(PropertySpec.builder("config", configClassName, KModifier.PRIVATE).initializer("config").build())
+                .primaryConstructor(
+                    FunSpec
+                        .constructorBuilder()
+                        .addParameter("initialState", uiState)
+                        .addParameter("reducer", reducerType)
+                        .addParameter("sideEffects", sideEffectMapClassName)
+                        .addParameter("middlewares", middlewareListType)
+                        .build(),
+                ).addProperty(PropertySpec.builder("initialState", uiState, KModifier.PRIVATE).initializer("initialState").build())
+                .addProperty(PropertySpec.builder("reducer", reducerType, KModifier.PRIVATE).initializer("reducer").build())
+                .addProperty(
+                    PropertySpec.builder("sideEffects", sideEffectMapClassName, KModifier.PRIVATE).initializer("sideEffects").build(),
+                ).addProperty(PropertySpec.builder("middlewares", middlewareListType, KModifier.PRIVATE).initializer("middlewares").build())
                 .addFunction(
                     FunSpec
                         .builder("create")
                         .addModifiers(KModifier.OVERRIDE)
-                        .addTypeVariable(TypeVariableName("T", MEMBER_ANDROID_VIEWMODEL))
-                        .addParameter("modelClass", Class::class.asClassName().parameterizedBy(TypeVariableName("T")))
+                        .addTypeVariable(
+                            TypeVariableName(
+                                "T",
+                                ClassName("androidx.lifecycle", "ViewModel"),
+                            ),
+                        ).addParameter("modelClass", Class::class.asClassName().parameterizedBy(TypeVariableName("T")))
                         .returns(TypeVariableName("T"))
                         .addStatement(
-                            "return %T(config.reducer, config.getSideEffects(), config.middlewares) as T",
+                            "return %T(initialState = initialState, reducer = reducer, sideEffects = sideEffects, middlewares = middlewares) as T",
                             viewModelClassName,
                         ).build(),
                 ).build()
 
         FileSpec
             .builder(packageName, viewModelName)
+            .addImport("androidx.lifecycle", "ViewModelProvider")
+            .addImport("com.buildkt.mvi", "Reducer")
+            .addImport("com.buildkt.mvi", "SideEffectMap")
+            .addImport("com.buildkt.mvi.android", "NavigationEvent")
+            .addImport("com.buildkt.mvi.android", "UiEvent")
+            .addImport("java.lang", "Class")
+            .addImport("androidx.lifecycle", "ViewModel")
             .addType(viewModelClass)
             .addType(factoryClass)
             .build()
@@ -415,6 +494,8 @@ class MviScaffoldingProcessor(
         viewModelClassName: ClassName,
         factoryClassName: ClassName,
         configClassName: ClassName,
+        uiStateDeclaration: KSClassDeclaration,
+        intentDeclaration: KSClassDeclaration,
         navArguments: List<NavArgumentInfo>,
     ) {
         val packageName = paneFunction.packageName.asString()
@@ -424,10 +505,20 @@ class MviScaffoldingProcessor(
         val fileBuilder =
             FileSpec
                 .builder(packageName, "${paneName}Navigation")
+                .addImport("androidx.compose.foundation.layout", "padding")
+                .addImport("androidx.compose.ui.unit", "dp")
                 .addImport("androidx.compose.runtime", "getValue", "collectAsState")
+                .addImport("androidx.compose.foundation.layout", "Box")
+                .addImport("androidx.compose.foundation.layout", "fillMaxSize")
+                .addImport("androidx.compose.ui", "Alignment", "Modifier")
+                .addImport("androidx.lifecycle", "viewModelScope")
                 .addImport("androidx.lifecycle.viewmodel.compose", "viewModel")
                 .addImport("androidx.navigation.compose", "composable")
                 .addImport("com.buildkt.mvi.android", "CollectNavigationEvents")
+                .addImport("com.buildkt.mvi.android", "NavigationEvent")
+                .addImport("com.buildkt.mvi.android", "TimeTravelOverlay")
+                .addImport("com.buildkt.mvi.android", "UiEvent")
+                .addImport("kotlinx.coroutines", "launch")
 
         val navFunBuilder =
             FunSpec
@@ -476,26 +567,49 @@ class MviScaffoldingProcessor(
             composableArgs.add("$argName = $argName")
         }
         val composableArgsString = composableArgs.joinToString(separator = ",\n        ")
+        val uiStateTypeName = uiStateDeclaration.toClassName()
+        val intentTypeName = intentDeclaration.toClassName()
+
+        val paneFunctionName = paneFunction.simpleName.asString()
 
         navFunBuilder.addCode(
             """
             |composable(route = route) { backStackEntry ->
             |   val config = %T().apply(config)
-            |   val viewModel: %T = viewModel(factory = %T(config))
+            |   val initialState = %T()
+            |   val viewModel: %T = viewModel(factory = %T(initialState = initialState, reducer = config.reducer, sideEffects = config.getSideEffects(), middlewares = config.middlewares))
             |   val state by viewModel.uiState.collectAsState()
             |
             |   CollectNavigationEvents(viewModel, navController)
             |
             |   $argumentExtractionBlock
-            |   %M(
-            |        $composableArgsString
-            |   )
+            |   
+            |   Box(modifier = Modifier.fillMaxSize()) {
+            |       $paneFunctionName(
+            |            $composableArgsString
+            |       )
+            |       
+            |       if (config.timeTravelDebugging?.enableTimeTravelOverlayUi == true) {
+            |           viewModel.getTimeTravelDebugger()?.let { timeTravelDebugger ->
+            |               val stateHistoryStorage = config.timeTravelDebugging?.stateHistoryStorage
+            |               Box(
+            |                   modifier = Modifier.fillMaxSize()
+            |               ) {
+            |                   TimeTravelOverlay(
+            |                       timeTravelDebugger = timeTravelDebugger,
+            |                       modifier = Modifier.padding(16.dp).align(Alignment.BottomStart),
+            |                       saveHistory = { history -> viewModel.viewModelScope.launch { stateHistoryStorage?.saveHistory(history) } }
+            |                   )
+            |               }
+            |           }
+            |       }
+            |   }
             |}
             """.trimMargin(),
             configClassName,
+            uiStateTypeName,
             viewModelClassName,
             factoryClassName,
-            MemberName(paneFunction.packageName.asString(), paneFunction.simpleName.asString()),
         )
 
         fileBuilder
@@ -524,12 +638,12 @@ class MviScaffoldingProcessor(
         val MEMBER_ANDROID_VIEWMODEL = ClassName("androidx.lifecycle", "ViewModel")
         val MEMBER_FLOW = ClassName("kotlinx.coroutines.flow", "Flow")
         val MEMBER_MIDDLEWARE = ClassName("com.buildkt.mvi", "Middleware")
-        val MEMBER_MVI_VIEWMODEL = ClassName("com.buildkt.mvi.android", "ViewModel")
         val MEMBER_NAV_CONTROLLER = ClassName("androidx.navigation", "NavController")
         val MEMBER_NAV_GRAPH_BUILDER = ClassName("androidx.navigation", "NavGraphBuilder")
         val MEMBER_REDUCER = ClassName("com.buildkt.mvi", "Reducer")
         val MEMBER_SIDE_EFFECT = ClassName("com.buildkt.mvi", "SideEffect")
         val MEMBER_SIDE_EFFECT_MAP = ClassName("com.buildkt.mvi", "SideEffectMap")
+        val MEMBER_STATE_HOLDER = ClassName("com.buildkt.mvi", "StateHolder")
         val MEMBER_UI_EVENT = ClassName("com.buildkt.mvi.android", "UiEvent")
         val MEMBER_VIEW_MODEL_PROVIDER_FACTORY = ClassName("androidx.lifecycle", "ViewModelProvider", "Factory")
     }
