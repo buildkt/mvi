@@ -2,6 +2,7 @@ package com.buildkt.mvi.android
 
 import com.buildkt.mvi.SideEffect
 import com.buildkt.mvi.SideEffectResult
+import kotlin.reflect.KClass
 
 /**
  * Creates a [SideEffect] that triggers a navigation event to a specific route string.
@@ -24,6 +25,34 @@ import com.buildkt.mvi.SideEffectResult
 fun <S, I> routeTo(route: (state: S, intent: I) -> String): SideEffect<S, I> =
     SideEffect { state, intent ->
         SideEffectResult.Navigation(event = NavigationEvent.To(route = route(state, intent)))
+    }
+
+/**
+ * Creates a [SideEffect] that triggers a navigation event to a route string, with the intent
+ * typed as a specific subclass [T] of [I] so the lambda receives the concrete intent without casting.
+ *
+ * Use this when the side effect is mapped to a single intent type (e.g. [AddressListIntent.EditAddress])
+ * and you want to access intent properties without casting.
+ *
+ * Example:
+ * sideEffects {
+ *   editAddress = routeToIntent(AddressListIntent.EditAddress::class) { _, intent ->
+ *     editAddressRoute(addressId = intent.addressId)
+ *   }
+ * }
+ *
+ * @param intentClass The [KClass] of the concrete intent type that triggers this side effect.
+ * @param route A lambda that receives the current state and the typed intent and returns a route `String`.
+ * @return A [SideEffect] that emits a [NavigationEvent.To].
+ */
+fun <S, I : Any, T : I> routeToIntent(route: (state: S, intent: T) -> String): SideEffect<S, I> =
+    SideEffect { state, intent ->
+      //  @Suppress("UNCHECKED_CAST")
+       // if (intentClass.isInstance(intent)) {
+            SideEffectResult.Navigation(event = NavigationEvent.To(route = route(state, intent as T)))
+        //} else {
+         //   SideEffectResult.NoOp
+        //}
     }
 
 /**
@@ -64,4 +93,32 @@ fun <S, I> navigate(event: NavigationEvent): SideEffect<S, I> =
 fun <S, I> navigate(event: (state: S, intent: I) -> NavigationEvent): SideEffect<S, I> =
     SideEffect { state, intent ->
         SideEffectResult.Navigation(event = event(state, intent))
+    }
+
+/**
+ * Creates a [SideEffect] that dynamically constructs a [NavigationEvent], with the intent
+ * typed as a specific subclass [T] of [I] so the lambda receives the concrete intent without casting.
+ *
+ * Use this when the side effect is mapped to a single intent type and you want to access
+ * intent properties without casting.
+ *
+ * Example:
+ * sideEffects {
+ *   addressSelected = navigateIntent(AddressListIntent.AddressSelected::class) { _, intent ->
+ *     NavigationEvent.PopBackWithResult(key = ADDRESS_FLOW_RESULT, result = intent.addressId)
+ *   }
+ * }
+ *
+ * @param intentClass The [KClass] of the concrete intent type that triggers this side effect.
+ * @param event A lambda that receives the current state and the typed intent and returns a [NavigationEvent].
+ * @return A [SideEffect] that emits the dynamically created [NavigationEvent].
+ */
+fun <S, I : Any, T : I> navigateIntent(event: (state: S, intent: T) -> NavigationEvent): SideEffect<S, I> =
+    SideEffect { state, intent ->
+        @Suppress("UNCHECKED_CAST")
+       // if (intentClass.isInstance(intent)) {
+            SideEffectResult.Navigation(event = event(state, intent as T))
+        //} else {
+         //   SideEffectResult.NoOp
+        //}
     }

@@ -6,6 +6,7 @@ import androidx.navigation.navigation
 import com.buildkt.feature.restaurants.data.RestaurantRepositoryImpl
 import com.buildkt.feature.restaurants.domain.RestaurantRepository
 import com.buildkt.feature.restaurants.presentation.RestaurantsIntent
+import com.buildkt.feature.restaurants.presentation.RestaurantsUiState
 import com.buildkt.feature.restaurants.presentation.detail.loadPaginatedMenus
 import com.buildkt.feature.restaurants.presentation.detail.loadRestaurantInfo
 import com.buildkt.feature.restaurants.presentation.detail.restaurantDetailPane
@@ -14,7 +15,7 @@ import com.buildkt.feature.restaurants.presentation.loadPaginatedRestaurants
 import com.buildkt.feature.restaurants.presentation.restaurantsPane
 import com.buildkt.feature.restaurants.presentation.restaurantsReducer
 import com.buildkt.mvi.android.logMiddleware
-import com.buildkt.mvi.android.routeTo
+import com.buildkt.mvi.android.routeToIntent
 import com.buildkt.mvi.parallelSideEffect
 
 fun NavGraphBuilder.restaurantsFlowNavigation(
@@ -33,8 +34,7 @@ fun NavGraphBuilder.restaurantsFlowNavigation(
         sideEffects {
             paneLaunched = loadPaginatedRestaurants(repository = restaurantRepository)
 
-            restaurantSelected = routeTo { _, intent ->
-                intent as RestaurantsIntent.RestaurantSelected
+            restaurantSelected = routeToIntent<RestaurantsUiState, RestaurantsIntent, RestaurantsIntent.RestaurantSelected> { _, intent ->
                 detailPaneRoute(restaurantId = intent.restaurantId)
             }
         }

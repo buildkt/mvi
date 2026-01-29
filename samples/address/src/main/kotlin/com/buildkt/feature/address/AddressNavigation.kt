@@ -20,13 +20,16 @@ import com.buildkt.feature.address.presentation.edit.editAddressValidateStreet
 import com.buildkt.feature.address.presentation.edit.editAddressValidateZip
 import com.buildkt.feature.address.presentation.edit.loadAddress
 import com.buildkt.feature.address.presentation.listing.AddressListIntent
+import com.buildkt.feature.address.presentation.listing.AddressListUiState
 import com.buildkt.feature.address.presentation.listing.addressListPane
 import com.buildkt.feature.address.presentation.listing.addressListReducer
 import com.buildkt.feature.address.presentation.listing.loadAddresses
 import com.buildkt.mvi.android.NavigationEvent
 import com.buildkt.mvi.android.logMiddleware
 import com.buildkt.mvi.android.navigate
+import com.buildkt.mvi.android.navigateIntent
 import com.buildkt.mvi.android.routeTo
+import com.buildkt.mvi.android.routeToIntent
 import com.buildkt.mvi.android.showToast
 
 fun NavGraphBuilder.addressFlowNavigation(
@@ -48,19 +51,15 @@ fun NavGraphBuilder.addressFlowNavigation(
             backClicked = navigate(event = NavigationEvent.PopBack)
             paneLaunched = loadAddresses(repository = addressRepository)
 
-            addressSelected =
-                navigate { _, intent ->
-                    intent as AddressListIntent.AddressSelected
-                    NavigationEvent.PopBackWithResult(key = ADDRESS_FLOW_RESULT, result = intent.addressId)
-                }
+            addressSelected = navigateIntent<AddressListUiState, AddressListIntent, AddressListIntent.AddressSelected> { _, intent ->
+                NavigationEvent.PopBackWithResult(key = ADDRESS_FLOW_RESULT, result = intent.addressId)
+            }
 
             addNewAddress = routeTo { _, _ -> CREATE_PANE_ROUTE }
 
-            editAddress =
-                routeTo { _, intent ->
-                    intent as AddressListIntent.EditAddress
-                    editAddressRoute(addressId = intent.addressId)
-                }
+            editAddress = routeToIntent<AddressListUiState, AddressListIntent, AddressListIntent.EditAddress> { _, intent ->
+                editAddressRoute(addressId = intent.addressId)
+            }
         }
     }
 
