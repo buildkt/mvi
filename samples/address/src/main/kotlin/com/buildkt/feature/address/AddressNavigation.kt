@@ -20,13 +20,16 @@ import com.buildkt.feature.address.presentation.edit.editAddressValidateStreet
 import com.buildkt.feature.address.presentation.edit.editAddressValidateZip
 import com.buildkt.feature.address.presentation.edit.loadAddress
 import com.buildkt.feature.address.presentation.listing.AddressListIntent
+import com.buildkt.feature.address.presentation.listing.AddressListIntent.AddressSelected
+import com.buildkt.feature.address.presentation.listing.AddressListIntent.EditAddress
+import com.buildkt.feature.address.presentation.listing.AddressListUiState
 import com.buildkt.feature.address.presentation.listing.addressListPane
 import com.buildkt.feature.address.presentation.listing.addressListReducer
 import com.buildkt.feature.address.presentation.listing.loadAddresses
 import com.buildkt.mvi.android.NavigationEvent
 import com.buildkt.mvi.android.logMiddleware
-import com.buildkt.mvi.android.navigate
-import com.buildkt.mvi.android.routeTo
+import com.buildkt.mvi.android.navigateToEvent
+import com.buildkt.mvi.android.navigateToRoute
 import com.buildkt.mvi.android.showToast
 
 fun NavGraphBuilder.addressFlowNavigation(
@@ -45,22 +48,18 @@ fun NavGraphBuilder.addressFlowNavigation(
         reducer = addressListReducer()
 
         sideEffects {
-            backClicked = navigate(event = NavigationEvent.PopBack)
+            backClicked = navigateToEvent(event = NavigationEvent.PopBack)
             paneLaunched = loadAddresses(repository = addressRepository)
 
-            addressSelected =
-                navigate { _, intent ->
-                    intent as AddressListIntent.AddressSelected
-                    NavigationEvent.PopBackWithResult(key = ADDRESS_FLOW_RESULT, result = intent.addressId)
-                }
+            addressSelected = navigateToEvent<AddressListUiState, AddressListIntent, AddressSelected> { _, intent ->
+                NavigationEvent.PopBackWithResult(key = ADDRESS_FLOW_RESULT, result = intent.addressId)
+            }
 
-            addNewAddress = routeTo { _, _ -> CREATE_PANE_ROUTE }
+            addNewAddress = navigateToRoute { _, _ -> CREATE_PANE_ROUTE }
 
-            editAddress =
-                routeTo { _, intent ->
-                    intent as AddressListIntent.EditAddress
-                    editAddressRoute(addressId = intent.addressId)
-                }
+            editAddress = navigateToRoute<AddressListUiState, AddressListIntent, EditAddress> { _, intent ->
+                editAddressRoute(addressId = intent.addressId)
+            }
         }
     }
 
@@ -70,7 +69,7 @@ fun NavGraphBuilder.addressFlowNavigation(
         reducer = createAddressReducer()
 
         sideEffects {
-            backClicked = navigate(event = NavigationEvent.PopBack)
+            backClicked = navigateToEvent(event = NavigationEvent.PopBack)
 
             streetChanged = createAddressValidateStreet
             cityChanged = createAddressValidateCity
@@ -78,7 +77,7 @@ fun NavGraphBuilder.addressFlowNavigation(
             countryChanged = createAddressValidateCountry
 
             saveAddress = createAddress(repository = addressRepository)
-            saveAddressResultSuccess = navigate(event = NavigationEvent.PopBack)
+            saveAddressResultSuccess = navigateToEvent(event = NavigationEvent.PopBack)
             saveAddressResultFailure = showToast(message = "Ops! Something went wrong")
         }
     }
@@ -89,7 +88,7 @@ fun NavGraphBuilder.addressFlowNavigation(
         reducer = editAddressReducer()
 
         sideEffects {
-            backClicked = navigate(event = NavigationEvent.PopBack)
+            backClicked = navigateToEvent(event = NavigationEvent.PopBack)
 
             loadAddress = loadAddress(repository = addressRepository)
 
@@ -99,7 +98,7 @@ fun NavGraphBuilder.addressFlowNavigation(
             countryChanged = editAddressValidateCountry
 
             editAddress = editAddress(repository = addressRepository)
-            editAddressResultSuccess = navigate(event = NavigationEvent.PopBack)
+            editAddressResultSuccess = navigateToEvent(event = NavigationEvent.PopBack)
             editAddressResultFailure = showToast(message = "Ops! Something went wrong")
         }
     }

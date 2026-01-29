@@ -4,43 +4,89 @@ import com.buildkt.mvi.SideEffect
 import com.buildkt.mvi.SideEffectResult
 
 /**
- * Creates a [SideEffect] that triggers a navigation event to a specific route string.
+ * Creates a [SideEffect] that triggers a navigation event.
  *
- * This is the most common navigation side effect. It simplifies navigating to a destination
- * whose route may depend on the current state or the triggering intent.
+ * This function has two overloads:
+ * 1.  **Static Event**: Pass a predefined [NavigationEvent] directly. This is ideal for simple,
+ *     non-dynamic navigation actions, such as popping the back stack.
  *
- * Example:
- * sideEffects {
- *   addressSelected = routeTo { state, intent ->
- *      "address-details/${intent.addressId}"
- *   }
- * }
+ *     Example:
+ *     ```kotlin
+ *     sideEffects {
+ *       goBack = navigate(event = NavigationEvent.PopBack)
+ *     }
+ *     ```
+ *
+ * 2.  **Dynamic Event**: Provide a lambda that receives the current state and intent and
+ *     returns a [NavigationEvent]. This is an advanced use case for when the entire navigation
+ *     action, not just the route, needs to be determined at runtime.
+ *
+ *     Example:
+ *     ```kotlin
+ *     sideEffects {
+ *       processAction = navigate { state, intent ->
+ *         if (state.isFlowComplete) {
+ *           NavigationEvent.PopBackWithResult(key = "result", result = state.resultData)
+ *         } else {
+ *           NavigationEvent.To(route = "next-step/${intent.id}")
+ *         }
+ *       }
+ *     }
+ *     ```
  *
  * @param S The screen's `UiState` type.
  * @param I The screen's `Intent` type.
- * @param route A lambda that receives the current state and intent and must return a route `String`.
- * @return A [SideEffect] that emits a [NavigationEvent.To].
+ * @param event A static [NavigationEvent] or a lambda `(S, I) -> NavigationEvent` to dynamically create one.
+ * @return A [SideEffect] that emits the resulting [NavigationEvent].
  */
-fun <S, I> routeTo(route: (state: S, intent: I) -> String): SideEffect<S, I> =
-    SideEffect { state, intent ->
-        SideEffectResult.Navigation(event = NavigationEvent.To(route = route(state, intent)))
+fun <S, I> navigateToEvent(event: NavigationEvent): SideEffect<S, I> =
+    SideEffect { _, _ ->
+        SideEffectResult.Navigation(event = event)
     }
 
 /**
- * Creates a [SideEffect] that triggers a predefined, static [NavigationEvent].
- * This is ideal for simple, non-dynamic navigation actions, such as popping the back stack.
+ * Creates a [SideEffect] that triggers a navigation event.
  *
- * Example:
- * sideEffects {
- *   addressSelected = navigate(event = NavigationEvent.PopBack)
- * }
+ * This function has two overloads:
+ * 1.  **Static Event**: Pass a predefined [NavigationEvent] directly. This is ideal for simple,
+ *     non-dynamic navigation actions, such as popping the back stack.
  *
- * @param event The static [NavigationEvent] to be emitted (e.g., `NavigationEvent.PopBack`).
- * @return A [SideEffect] that emits the provided navigation event.
+ *     Example:
+ *     ```kotlin
+ *     sideEffects {
+ *       goBack = navigate(event = NavigationEvent.PopBack)
+ *     }
+ *     ```
+ *
+ * 2.  **Dynamic Event**: Provide a lambda that receives the current state and intent and
+ *     returns a [NavigationEvent]. This is an advanced use case for when the entire navigation
+ *     action, not just the route, needs to be determined at runtime.
+ *
+ *     Example:
+ *     ```kotlin
+ *     sideEffects {
+ *       processAction = navigate { state, intent ->
+ *         if (state.isFlowComplete) {
+ *           NavigationEvent.PopBackWithResult(key = "result", result = state.resultData)
+ *         } else {
+ *           NavigationEvent.To(route = "next-step/${intent.id}")
+ *         }
+ *       }
+ *     }
+ *     ```
+ *
+ * @param S The screen's `UiState` type.
+ * @param I The screen's `Intent` type.
+ * @param event A static [NavigationEvent] or a lambda `(S, I) -> NavigationEvent` to dynamically create one.
+ * @return A [SideEffect] that emits the resulting [NavigationEvent].
  */
-fun <S, I> navigate(event: NavigationEvent): SideEffect<S, I> =
-    SideEffect { _, _ ->
-        SideEffectResult.Navigation(event = event)
+inline fun <S, I : Any, reified T : I> navigateToEvent(crossinline event: (state: S, intent: T) -> NavigationEvent): SideEffect<S, I> =
+    SideEffect { state, intent ->
+        if (intent is T) {
+            SideEffectResult.Navigation(event = event(state, intent))
+        } else {
+             SideEffectResult.NoOp
+        }
     }
 
 /**
@@ -51,8 +97,8 @@ fun <S, I> navigate(event: NavigationEvent): SideEffect<S, I> =
  *
  * Example:
  * sideEffects {
- *   addressSelected = navigate { state, intent ->
- *      SideEffectResult.Navigation(event = NavigationEvent.To(route = route(state, intent)))
+ *   addressSelected = navigateRoute { state, intent ->
+ *      NavigationEvent.To(route = "details/${intent.addressId}")
  *   }
  * }
  *
@@ -61,7 +107,11 @@ fun <S, I> navigate(event: NavigationEvent): SideEffect<S, I> =
  * @param event A lambda that receives the current state and intent and must return a [NavigationEvent].
  * @return A [SideEffect] that emits the dynamically created [NavigationEvent].
  */
-fun <S, I> navigate(event: (state: S, intent: I) -> NavigationEvent): SideEffect<S, I> =
+inline fun <S, I : Any, reified T : I> navigateToRoute(crossinline route: (state: S, intent: T) -> String): SideEffect<S, I> =
     SideEffect { state, intent ->
-        SideEffectResult.Navigation(event = event(state, intent))
+        if (intent is T) {
+            SideEffectResult.Navigation(event = NavigationEvent.To(route = route(state, intent)))
+        } else {
+            SideEffectResult.NoOp
+        }
     }
