@@ -54,6 +54,39 @@ interface StateHolder<State, Intent, NavEvent, UiEvent> {
 }
 
 /**
+ * Interface that extends [StateHolder] with debug-only state restoration capabilities.
+ * This interface is should only be used by debug infrastructure such as time-travel debugging.
+ *
+ * **Warning**: This interface and its methods should only be used in debug builds and for debugging purposes.
+ * Direct state mutation bypasses the normal MVI flow (reducer and side effects) and can lead to
+ * inconsistent application state.
+ *
+ * @param State The type representing the UI state.
+ * @param Intent The type representing user actions or events from the UI.
+ * @param NavEvent The type representing one-shot navigation commands.
+ * @param UiEvent The type representing transient, one-shot UI events.
+ */
+interface DebuggableStateHolder<State, Intent, NavEvent, UiEvent> : StateHolder<State, Intent, NavEvent, UiEvent> {
+    /**
+     * Restores the state to a specific value. This is intended for debugging purposes only,
+     * such as time-travel debugging. It bypasses the normal MVI flow (reducer and side effects).
+     *
+     * **Warning**: This method should only be used in debug builds and for debugging purposes.
+     * Restoring state directly can lead to inconsistent application state if side effects
+     * or other state-dependent logic is not properly handled.
+     *
+     * **Thread Safety:**
+     * - This method is thread-safe and can be called from any thread
+     * - State updates are atomic via MutableStateFlow
+     * - However, calling this while [onIntent] is processing may cause race conditions
+     *   in the MVI flow. It's recommended to call this when the MVI loop is idle.
+     *
+     * @param state The state to restore.
+     */
+    fun restoreState(state: State)
+}
+
+/**
  * The default, platform-agnostic implementation of the [StateHolder] interface.
  *
  * It orchestrates the entire MVI loop:
@@ -76,13 +109,13 @@ interface StateHolder<State, Intent, NavEvent, UiEvent> {
  * @param middlewares A list of [Middleware]s for observing and intercepting the MVI loop,
  * primarily used for logging or debugging.
  */
-class StateHolderImpl<State, Intent : Any, NavEvent, UiEvent>(
+class DefaultStateHolder<State, Intent : Any, NavEvent, UiEvent>(
     initialState: State,
     private val reducer: Reducer<State, Intent>,
     private val sideEffects: SideEffectMap<State, Intent>,
-    private val coroutineScope: CoroutineScope,
     private val middlewares: List<Middleware<State, Intent>> = emptyList(),
-) : StateHolder<State, Intent, NavEvent, UiEvent> {
+    private val coroutineScope: CoroutineScope,
+) : DebuggableStateHolder<State, Intent, NavEvent, UiEvent> {
     /**
      * A hot flow for emitting one-shot navigation events.
      *
@@ -116,6 +149,18 @@ class StateHolderImpl<State, Intent : Any, NavEvent, UiEvent>(
      */
     private val _uiState = MutableStateFlow(value = initialState)
     override val uiState: StateFlow<State> = _uiState
+
+    init {
+        coroutineScope.launch {
+            middlewares
+                .filterIsInstance<InitializableMiddleware<State, Intent>>()
+                .forEach { it.initialize(initialState) }
+        }
+    }
+
+    override fun restoreState(state: State) {
+        _uiState.value = state
+    }
 
     override fun onIntent(intent: Intent) {
         coroutineScope.launch {

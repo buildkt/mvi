@@ -7,7 +7,7 @@ plugins {
 
 val artifactId = "android"
 group = "com.buildkt.mvi"
-version = "0.1.2"
+version = "0.2.0"
 
 android {
     namespace = "com.buildkt.mvi.android"
@@ -20,6 +20,8 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material3.icons.core)
+    implementation(libs.androidx.material3.icons.extended)
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.navigation.runtime.android)
 }

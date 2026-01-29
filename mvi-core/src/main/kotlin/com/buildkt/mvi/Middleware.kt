@@ -58,3 +58,22 @@ abstract class Middleware<S, I> {
         intent: I,
     ) {}
 }
+
+/**
+ * Optional lifecycle hook for middlewares that need to be initialized with the initial state
+ * asynchronously (e.g. time-travel debugging). This avoids blocking the initialization thread.
+ *
+ * Implement this interface instead of performing initialization in a constructor or init block
+ * when that initialization is suspendable. The [StateHolder] will call [initialize] from its
+ * [kotlinx.coroutines.CoroutineScope] after construction.
+ *
+ * @param S The type of the screen's state.
+ * @param I The type of the screen's intents.
+ */
+interface InitializableMiddleware<S, I> {
+    /**
+     * Called once after the state holder is constructed, with the initial state.
+     * Implementations can use this to register the initial state (e.g. for history).
+     */
+    suspend fun initialize(state: S)
+}

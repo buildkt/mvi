@@ -40,7 +40,7 @@ private fun MainScreen(modifier: Modifier = Modifier) {
 
     NavHost(
         navController = navController,
-        startDestination = RESTAURANTS_FLOW_ROUTE,
+        startDestination = ADDRESS_FLOW_ROUTE,
         modifier = modifier,
         builder = {
             addressFlowNavigation(

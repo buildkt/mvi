@@ -13,7 +13,7 @@ import com.buildkt.feature.restaurants.presentation.detail.restaurantDetailReduc
 import com.buildkt.feature.restaurants.presentation.loadPaginatedRestaurants
 import com.buildkt.feature.restaurants.presentation.restaurantsPane
 import com.buildkt.feature.restaurants.presentation.restaurantsReducer
-import com.buildkt.mvi.android.LogMiddleware
+import com.buildkt.mvi.android.logMiddleware
 import com.buildkt.mvi.android.routeTo
 import com.buildkt.mvi.parallelSideEffect
 
@@ -26,7 +26,7 @@ fun NavGraphBuilder.restaurantsFlowNavigation(
     startDestination = LISTING_PANE_ROUTE,
 ) {
     restaurantsPane(navController = navController, route = LISTING_PANE_ROUTE) {
-        middlewares += LogMiddleware()
+        middlewares += logMiddleware()
 
         reducer = restaurantsReducer()
 
@@ -40,7 +40,7 @@ fun NavGraphBuilder.restaurantsFlowNavigation(
         }
     }
     restaurantDetailPane(navController, route = DETAIL_PANE_ROUTE) {
-        middlewares += LogMiddleware()
+        middlewares += logMiddleware()
 
         reducer = restaurantDetailReducer()
 
