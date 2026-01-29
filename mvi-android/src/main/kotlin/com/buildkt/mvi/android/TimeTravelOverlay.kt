@@ -73,9 +73,13 @@ import kotlin.math.roundToInt
  * - Draggable toolbar that can be moved anywhere on the screen
  * - Horizontal toolbar with navigation controls
  * - Expandable to show state history list
- * - Navigation controls (previous/next)
- * - Save/load history to disk
+ * - Navigation controls (previous/next) to restore state at a given index
+ * - Save button persists current history to disk when [saveHistory] is provided.
+ *   Load is handled elsewhere (e.g. at screen/ViewModel creation via [TimeTravelDebugger.loadHistory]).
  * - Collapsible UI
+ *
+ * State diff in the history list is best-effort and based on [Object.toString] (segment split by ", ").
+ * Non–data-class states or custom toString() can make the diff misleading or noisy.
  *
  * @param timeTravelDebugger The TimeTravelDebugger instance that contains the TimeTravelMiddleware.
  * @param modifier Modifier for the overlay container.
@@ -111,7 +115,7 @@ fun <S, I : Any> TimeTravelOverlay(
     // Save history when it changes (debounced to avoid excessive I/O)
     LaunchedEffect(history.size) {
         if (history.isNotEmpty()) {
-            delay(AutoSaveDebounceMs)
+            delay(AUTO_SAVE_DEBOUNCE_MILLIS)
             saveHistory?.invoke(history)
         }
     }
@@ -274,7 +278,7 @@ fun <S, I : Any> TimeTravelOverlay(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(HistoryListHeight)
+                            .height(HISTORY_LIST_HEIGHT)
                             .padding(horizontal = 8.dp)
                             .padding(top = 8.dp),
                 ) {
@@ -418,7 +422,7 @@ private fun <S, I> HistoryItem(
                         previousState = previousSnapshot?.state?.toString(),
                         defaultColor = defaultTextColor,
                         addedColor = addedColor,
-                        maxLength = MaxStateStringLength,
+                        maxLength = MAX_STATE_STRING_LENGTH,
                     )
                 }
 
@@ -443,7 +447,8 @@ private fun <S, I> HistoryItem(
 
 /**
  * Builds an AnnotatedString that highlights differences between previous and current state strings.
- * Uses segment-based diff (split by ", ") typical of Kotlin data class toString().
+ * Best-effort only: uses segment-based diff (split by ", ") typical of Kotlin data class [Object.toString].
+ * Non–data-class states or custom toString() can make the diff misleading or noisy.
  * Returns the annotated current state and an optional "removed" line for segments only in previous.
  */
 private fun buildStateDiffAnnotatedString(
@@ -509,6 +514,6 @@ private fun buildStateDiffAnnotatedString(
 }
 
 // Constants for UI configuration
-private val HistoryListHeight = 300.dp
-private const val MaxStateStringLength = 190
-private const val AutoSaveDebounceMs = 500L
+private val HISTORY_LIST_HEIGHT = 300.dp
+private const val MAX_STATE_STRING_LENGTH = 190
+private const val AUTO_SAVE_DEBOUNCE_MILLIS = 500L

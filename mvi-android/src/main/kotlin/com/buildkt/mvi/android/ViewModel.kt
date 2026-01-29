@@ -31,6 +31,8 @@ import kotlinx.coroutines.launch
  * @param Intent The type of the screen's intents.
  * @param stateHistoryStorage Optional storage for time-travel history. When set, history is saved
  * on [onCleared] for persistence across process death. Use with [com.buildkt.mvi.TimeTravelDebuggerConfig.stateHistoryStorage].
+ * Persistence on clear is best-effort: the save is not awaited, so if the process is killed
+ * immediately after [onCleared], the save may not complete.
  * @param onPersistenceError Optional callback when saving history fails (e.g. for logging).
  */
 abstract class ViewModel<State, Intent : Any>(

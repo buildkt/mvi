@@ -103,7 +103,8 @@ class TimeTravelDebuggerConfig<S, I> {
 
     /**
      * Storage implementation for persisting and loading state history.
-     * Defaults to [InMemoryStateHistoryStorage] which stores history in memory.
+     * Default is in-memory only; pass the same instance to the ViewModel constructor
+     * for save-on-clear persistence. Defaults to [InMemoryStateHistoryStorage].
      *
      * **Note**: The history is automatically saved/loaded by the time-travel overlay UI
      * if enabled. Custom implementations should handle serialization of state and intent types.
@@ -116,7 +117,8 @@ class TimeTravelDebuggerConfig<S, I> {
     var onReplayError: ((Throwable) -> Unit)? = null
 
     /**
-     * Optional callback invoked when history size approaches [maxHistorySize] (at 80% and when at limit).
+     * Optional callback invoked when history size crosses 80% of [maxHistorySize] or when at limit.
+     * Invoked at most once per crossing (so at most twice total: once at 80%, once at 100%).
      * Use for monitoring and logging memory pressure.
      */
     var onHistorySizeWarning: ((currentSize: Int, maxSize: Int) -> Unit)? = null

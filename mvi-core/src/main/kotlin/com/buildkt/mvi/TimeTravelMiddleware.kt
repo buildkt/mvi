@@ -15,10 +15,13 @@ import kotlinx.coroutines.sync.withLock
  *
  * **Key Features:**
  * - Tracks complete state history with associated intents
- * - Supports state restoration via [restoreStateAt]
+ * - Supports state restoration via [restoreStateAt] (and [TimeTravelDebugger.restoreStateFromHistory] on Android)
  * - Thread-safe operations using mutex synchronization
  * - Configurable history size limits
  * - Preloaded state support for testing
+ *
+ * **Replay semantics:** "Previous/Next" (restore) is the reliable way to inspect a single point in time.
+ * Restoring state at an index directly sets the state without re-running intents.
  *
  * **Thread Safety:**
  * - All history modifications are protected by a mutex to prevent race conditions
@@ -33,11 +36,9 @@ import kotlinx.coroutines.sync.withLock
  *     maxHistorySize = 100
  * }
  *
- * // In your debug UI:
- * val middleware = viewModel.getTimeTravelMiddleware()
- * middleware?.restoreStateAt(index) { state ->
- *     viewModel.restoreState(state)
- * }
+ * // In your debug UI (e.g. time-travel overlay):
+ * val debugger = viewModel.getTimeTravelDebugger()
+ * debugger?.restoreStateFromHistory(index)
  * ```
  */
 class TimeTravelMiddleware<S, I>(
@@ -53,6 +54,12 @@ class TimeTravelMiddleware<S, I>(
      * Set to 80% of [maxHistorySize] to warn before truncation.
      */
     private val historySizeWarningThreshold = (maxHistorySize * 0.8).toInt().coerceAtLeast(0)
+
+    /**
+     * Last size threshold at which [onHistorySizeWarning] was invoked, so we only warn
+     * once per crossing of 80% and once per crossing of 100% (at limit).
+     */
+    private var lastHistorySizeWarnedAt: Int = -1
 
     private val historyMutex = Mutex()
 
@@ -132,8 +139,10 @@ class TimeTravelMiddleware<S, I>(
      * Thread-safe method to add a new state to the history.
      * Uses mutex to prevent race conditions when multiple state reductions occur concurrently.
      *
-     * **Performance Note**: This method optimizes for the common case (no truncation needed)
-     * by avoiding unnecessary list copies when possible.
+     * **Performance:** Optimizes for the common case (no truncation needed) by avoiding
+     * unnecessary list copies. When at capacity, truncation does a mutable copy, subList
+     * clear, and full re-index (O(n) per reduction). Acceptable for typical debug sizes
+     * (e.g. 100); very large [maxHistorySize] may impact performance.
      */
     override suspend fun onStateReduced(
         newState: S,
@@ -156,9 +165,11 @@ class TimeTravelMiddleware<S, I>(
                 // Direct immutable update - no copy needed
                 _history.value = currentHistory + newHistoryEntry
                 _currentHistoryIndex.value = newIndex
-                // Warn when history size approaches limit
-                if (currentHistory.size + 1 >= historySizeWarningThreshold) {
-                    onHistorySizeWarning?.invoke(currentHistory.size + 1, maxHistorySize)
+                // Warn at most once when crossing 80% threshold
+                val newSize = currentHistory.size + 1
+                if (newSize >= historySizeWarningThreshold && lastHistorySizeWarnedAt < historySizeWarningThreshold) {
+                    lastHistorySizeWarnedAt = historySizeWarningThreshold
+                    onHistorySizeWarning?.invoke(newSize, maxHistorySize)
                 }
             } else {
                 // Truncation needed - create mutable copy
@@ -190,8 +201,11 @@ class TimeTravelMiddleware<S, I>(
                 val finalIndex = mutableHistory.lastIndex
                 _history.value = mutableHistory
                 _currentHistoryIndex.value = finalIndex
-                // Warn when at limit (truncation just occurred)
-                onHistorySizeWarning?.invoke(mutableHistory.size, maxHistorySize)
+                // Warn at most once when crossing 100% (at limit)
+                if (lastHistorySizeWarnedAt < maxHistorySize) {
+                    lastHistorySizeWarnedAt = maxHistorySize
+                    onHistorySizeWarning?.invoke(mutableHistory.size, maxHistorySize)
+                }
             }
         }
     }
