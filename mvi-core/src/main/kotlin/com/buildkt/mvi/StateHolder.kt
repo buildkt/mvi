@@ -1,12 +1,15 @@
 package com.buildkt.mvi
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Defines the public contract for a platform-agnostic MVI state container.
@@ -150,6 +153,13 @@ class DefaultStateHolder<State, Intent : Any, NavEvent, UiEvent>(
     private val _uiState = MutableStateFlow(value = initialState)
     override val uiState: StateFlow<State> = _uiState
 
+    /**
+     * Pending jobs for debounced side effects, keyed by the [DebouncedSideEffect] instance.
+     * When a new intent triggers the same debounced effect, the previous job is cancelled
+     * and replaced. When a job completes (or is cancelled), it is removed from this map.
+     */
+    private val debouncedJobs = ConcurrentHashMap<Any, Job>()
+
     init {
         coroutineScope.launch {
             middlewares
@@ -173,18 +183,53 @@ class DefaultStateHolder<State, Intent : Any, NavEvent, UiEvent>(
 
             sideEffects[intent]?.let { sideEffect ->
                 middlewares.forEach { it.onSideEffect(sideEffect, intent) }
-                val result = sideEffect(stateAtTimeOfReduction, intent)
-                middlewares.forEach { it.onSideEffectResult(result, intent) }
 
-                @Suppress("UNCHECKED_CAST")
-                when (result) {
-                    is SideEffectResult.NewIntent -> onIntent(intent = result.intent)
-                    is SideEffectResult.NewIntents -> result.intents.collect(collector = ::onIntent)
-                    is SideEffectResult.ShowUiEvent -> _uiEvents.emit(value = result.event as? UiEvent ?: return@let)
-                    is SideEffectResult.Navigation -> _navigationEvents.emit(value = result.event as? NavEvent ?: return@let)
-                    is SideEffectResult.NoOp -> { /* Do nothing */ }
+                when (val debounced = sideEffect as? DebouncedSideEffect<State, Intent>) {
+                    null -> runSideEffectImmediately(sideEffect, stateAtTimeOfReduction, intent)
+                    else -> runDebouncedSideEffect(debounced, intent)
                 }
             }
+        }
+    }
+
+    private suspend fun runSideEffectImmediately(
+        sideEffect: SideEffect<State, Intent>,
+        state: State,
+        intent: Intent,
+    ) {
+        val result = sideEffect(state, intent)
+        middlewares.forEach { it.onSideEffectResult(result, intent) }
+        processSideEffectResult(result)
+    }
+
+    private fun runDebouncedSideEffect(
+        debounced: DebouncedSideEffect<State, Intent>,
+        intent: Intent,
+    ) {
+        debouncedJobs[debounced]?.cancel()
+        val job = coroutineScope.launch {
+            delay(debounced.delayMs)
+            val currentState = _uiState.value
+            val result = debounced.wrapped(currentState, intent)
+            middlewares.forEach { it.onSideEffectResult(result, intent) }
+            processSideEffectResult(result)
+        }
+        job.invokeOnCompletion { debouncedJobs.remove(debounced, job) }
+        debouncedJobs[debounced] = job
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun processSideEffectResult(result: SideEffectResult<Intent>) {
+        when (result) {
+            is SideEffectResult.NewIntent -> onIntent(intent = result.intent)
+            is SideEffectResult.NewIntents -> result.intents.collect(::onIntent)
+            is SideEffectResult.ShowUiEvent -> {
+                (result.event as? UiEvent)?.let { _uiEvents.emit(value = it) }
+            }
+            is SideEffectResult.Navigation -> {
+                (result.event as? NavEvent)?.let { _navigationEvents.emit(value = it) }
+            }
+            is SideEffectResult.NoOp -> { /* Do nothing */ }
         }
     }
 }

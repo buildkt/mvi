@@ -149,7 +149,18 @@ This module is written in pure Kotlin with no Android dependencies, making it su
 - Reducer<S, I>: A functional interface for a pure function reduce(S, I): S. Its sole responsibility is to produce a new state.
 - SideEffect<S, I>: A functional interface that executes business logic. It can access the current state and returns a SideEffectResult.
 - SideEffectResult<I>: A sealed class representing the outcome of a SideEffect (NewIntent, Navigation, ShowUiEvent, or NoOp).
-- Middleware<S, I>: An abstract class for observing the MVI loop (for logging, analytics, etc.). 
+- Middleware<S, I>: An abstract class for observing the MVI loop (for logging, analytics, etc.).
+
+#### Debounced side effects
+For intents that fire frequently (e.g. search-as-you-type), wrap a side effect with `debounced(delayMs, sideEffect)`. The runtime will **cancel** any existing pending run for that effect and start a new one that waits `delayMs`, then runs the wrapped effect with the **current** state and intent. Only the last run completes. Example:
+
+```kotlin
+sideEffects {
+    searchQueryChanged = debounced(300L, searchInPredefinedHabits(repository = habitRepository))
+}
+```
+
+The UI can dispatch `SearchQueryChanged(query)` on every keystroke; the reducer updates `state.query`, and after 300ms of no typing a single search runs with the latest `state.query`. 
 
 ### 2. mvi-annotation
 This lightweight module contains only the annotations used to configure code generation. 
