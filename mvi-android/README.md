@@ -32,9 +32,10 @@ These are sealed interfaces representing concrete, one-off events that can be tr
 ### 3. Side Effect Builders
 This module provides Android-specific SideEffect builder functions that simplify triggering navigation and UI events from 
 the side effect configuration DSL. 
-- routeTo { ... }: A builder for creating a SideEffect that results in a NavigationEvent.To. It's the standard way to trigger 
+- navigateToRoute { state, intent -> ... }: A builder for creating a SideEffect that results in a NavigationEvent.To. It's the standard way to trigger 
   navigation to a new screen.
-- navigate(event: NavigationEvent): A builder for triggering non-route-based events, such as NavigationEvent.PopBack.
+- navigateToEvent(event: NavigationEvent): A builder for triggering non-route-based events, such as NavigationEvent.PopBack.
+- navigateToEvent { state, intent -> ... }: Like navigateToEvent with a lambda, but the lambda receives the concrete intent type.
 - showSnackbar(message: String): A builder for displaying a Snackbar.
 - showToast(message: String): A builder for displaying a Toast.
 

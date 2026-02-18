@@ -23,32 +23,18 @@ sealed interface UiEvent {
      * @param context The Android [Context] required for operations like showing a `Toast`.
      * @param snackbarHostState The [SnackbarHostState] used to display `Snackbar` messages.
      */
-    suspend fun show(
-        context: Context,
-        snackbarHostState: SnackbarHostState,
-    )
+    suspend fun show(context: Context, snackbarHostState: SnackbarHostState)
 
     /** A UI event that displays a [Snackbar] message. */
-    data class ShowSnackbar(
-        val message: String,
-        val actionLabel: String? = null,
-    ) : UiEvent {
-        override suspend fun show(
-            context: Context,
-            snackbarHostState: SnackbarHostState,
-        ) {
+    data class ShowSnackbar(val message: String, val actionLabel: String? = null) : UiEvent {
+        override suspend fun show(context: Context, snackbarHostState: SnackbarHostState) {
             snackbarHostState.showSnackbar(message = message, actionLabel = actionLabel)
         }
     }
 
     /** A UI event that displays a short [Toast] message. */
-    data class ShowToast(
-        val message: String,
-    ) : UiEvent {
-        override suspend fun show(
-            context: Context,
-            snackbarHostState: SnackbarHostState,
-        ) {
+    data class ShowToast(val message: String) : UiEvent {
+        override suspend fun show(context: Context, snackbarHostState: SnackbarHostState) {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
@@ -62,10 +48,7 @@ sealed interface UiEvent {
  * @param message The text to be displayed in the Snackbar.
  * @param actionLabel Optional text for the Snackbar's action button.
  */
-fun <S, I> showSnackbar(
-    message: String,
-    actionLabel: String? = null,
-): SideEffect<S, I> =
+fun <S, I> showSnackbar(message: String, actionLabel: String? = null): SideEffect<S, I> =
     SideEffect { _, _ ->
         SideEffectResult.ShowUiEvent(event = UiEvent.ShowSnackbar(message, actionLabel))
     }
@@ -75,10 +58,9 @@ fun <S, I> showSnackbar(
  *
  * @param message The text to be displayed in the Toast.
  */
-fun <S, I> showToast(message: String): SideEffect<S, I> =
-    SideEffect { _, _ ->
-        SideEffectResult.ShowUiEvent(event = UiEvent.ShowToast(message))
-    }
+fun <S, I> showToast(message: String): SideEffect<S, I> = SideEffect { _, _ ->
+    SideEffectResult.ShowUiEvent(event = UiEvent.ShowToast(message))
+}
 
 /**
  * A Composable effect handler that collects [UiEvent]s from a flow
@@ -93,10 +75,7 @@ fun <S, I> showToast(message: String): SideEffect<S, I> =
  * passed to the event for execution.
  */
 @Composable
-fun CollectUiEvents(
-    uiEvents: Flow<UiEvent>,
-    snackbarHostState: SnackbarHostState,
-) {
+fun CollectUiEvents(uiEvents: Flow<UiEvent>, snackbarHostState: SnackbarHostState) {
     val context = LocalContext.current
     LaunchedEffect(uiEvents, snackbarHostState, context) {
         uiEvents

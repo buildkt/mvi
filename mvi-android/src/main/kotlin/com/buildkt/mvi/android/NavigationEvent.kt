@@ -16,9 +16,7 @@ import kotlinx.coroutines.flow.onEach
  */
 sealed interface NavigationEvent {
     /** Represents a navigation action to a specific route string. */
-    data class To(
-        val route: String,
-    ) : NavigationEvent
+    data class To(val route: String) : NavigationEvent
 
     /** Represents a navigation action to pop the current back stack entry. */
     data object PopBack : NavigationEvent
@@ -28,10 +26,7 @@ sealed interface NavigationEvent {
      * @param route The destination route to pop up to.
      * @param inclusive If true, the destination specified by [route] is also popped.
      */
-    data class PopUpTo(
-        val route: String,
-        val inclusive: Boolean = false,
-    ) : NavigationEvent
+    data class PopUpTo(val route: String, val inclusive: Boolean = false) : NavigationEvent
 
     /**
      * Represents a navigation action that pops the back stack and returns a result
@@ -40,10 +35,7 @@ sealed interface NavigationEvent {
      * @param key The key to associate with the result in the previous screen's `SavedStateHandle`.
      * @param result The value to be returned.
      */
-    data class PopBackWithResult<T>(
-        val key: String,
-        val result: T,
-    ) : NavigationEvent
+    data class PopBackWithResult<T>(val key: String, val result: T) : NavigationEvent
 }
 
 /**
@@ -59,10 +51,7 @@ sealed interface NavigationEvent {
  * @param navController The `NavController` instance that will perform the navigation actions.
  */
 @Composable
-fun <S, I : Any> CollectNavigationEvents(
-    viewModel: ViewModel<S, I>,
-    navController: NavController,
-) {
+fun <S, I : Any> CollectNavigationEvents(viewModel: ViewModel<S, I>, navController: NavController) {
     LaunchedEffect(viewModel, navController) {
         viewModel.navigationEvents
             .onEach { navEvent -> navController.navigate(navEvent = navEvent) }

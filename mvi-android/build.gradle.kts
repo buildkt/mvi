@@ -7,7 +7,7 @@ plugins {
 
 val artifactId = "android"
 group = "com.buildkt.mvi"
-version = "0.2.0"
+version = "0.3.0"
 
 android {
     namespace = "com.buildkt.mvi.android"
@@ -45,7 +45,7 @@ mavenPublishing {
     coordinates(
         group.toString(),
         artifactId,
-        version.toString(),
+        version.toString()
     )
 
     pom {
