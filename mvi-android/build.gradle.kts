@@ -45,7 +45,7 @@ mavenPublishing {
     coordinates(
         group.toString(),
         artifactId,
-        version.toString(),
+        version.toString()
     )
 
     pom {

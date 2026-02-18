@@ -39,10 +39,9 @@ import com.buildkt.mvi.SideEffectResult
  * @param event A static [NavigationEvent] or a lambda `(S, I) -> NavigationEvent` to dynamically create one.
  * @return A [SideEffect] that emits the resulting [NavigationEvent].
  */
-fun <S, I> navigateToEvent(event: NavigationEvent): SideEffect<S, I> =
-    SideEffect { _, _ ->
-        SideEffectResult.Navigation(event = event)
-    }
+fun <S, I> navigateToEvent(event: NavigationEvent): SideEffect<S, I> = SideEffect { _, _ ->
+    SideEffectResult.Navigation(event = event)
+}
 
 /**
  * Creates a [SideEffect] that triggers a navigation event.
@@ -80,14 +79,15 @@ fun <S, I> navigateToEvent(event: NavigationEvent): SideEffect<S, I> =
  * @param event A static [NavigationEvent] or a lambda `(S, I) -> NavigationEvent` to dynamically create one.
  * @return A [SideEffect] that emits the resulting [NavigationEvent].
  */
-inline fun <S, I : Any, reified T : I> navigateToEvent(crossinline event: (state: S, intent: T) -> NavigationEvent): SideEffect<S, I> =
-    SideEffect { state, intent ->
-        if (intent is T) {
-            SideEffectResult.Navigation(event = event(state, intent))
-        } else {
-             SideEffectResult.NoOp
-        }
+inline fun <S, I : Any, reified T : I> navigateToEvent(
+    crossinline event: (state: S, intent: T) -> NavigationEvent
+): SideEffect<S, I> = SideEffect { state, intent ->
+    if (intent is T) {
+        SideEffectResult.Navigation(event = event(state, intent))
+    } else {
+        SideEffectResult.NoOp
     }
+}
 
 /**
  * Creates a [SideEffect] that dynamically constructs a [NavigationEvent].
@@ -107,11 +107,12 @@ inline fun <S, I : Any, reified T : I> navigateToEvent(crossinline event: (state
  * @param event A lambda that receives the current state and intent and must return a [NavigationEvent].
  * @return A [SideEffect] that emits the dynamically created [NavigationEvent].
  */
-inline fun <S, I : Any, reified T : I> navigateToRoute(crossinline route: (state: S, intent: T) -> String): SideEffect<S, I> =
-    SideEffect { state, intent ->
-        if (intent is T) {
-            SideEffectResult.Navigation(event = NavigationEvent.To(route = route(state, intent)))
-        } else {
-            SideEffectResult.NoOp
-        }
+inline fun <S, I : Any, reified T : I> navigateToRoute(
+    crossinline route: (state: S, intent: T) -> String
+): SideEffect<S, I> = SideEffect { state, intent ->
+    if (intent is T) {
+        SideEffectResult.Navigation(event = NavigationEvent.To(route = route(state, intent)))
+    } else {
+        SideEffectResult.NoOp
     }
+}

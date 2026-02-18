@@ -41,7 +41,7 @@ abstract class ViewModel<State, Intent : Any>(
     sideEffects: SideEffectMap<State, Intent>,
     private val middlewares: List<Middleware<State, Intent>> = emptyList(),
     private val stateHistoryStorage: StateHistoryStorage<State, Intent>? = null,
-    private val onPersistenceError: ((Throwable) -> Unit)? = null,
+    private val onPersistenceError: ((Throwable) -> Unit)? = null
 ) : ViewModel(),
     StateHolder<State, Intent, NavigationEvent, UiEvent> {
     /**
@@ -56,7 +56,7 @@ abstract class ViewModel<State, Intent : Any>(
             reducer = reducer,
             middlewares = middlewares,
             sideEffects = sideEffects,
-            coroutineScope = viewModelScope,
+            coroutineScope = viewModelScope
         )
 
     override val navigationEvents: SharedFlow<NavigationEvent> = stateHolder.navigationEvents

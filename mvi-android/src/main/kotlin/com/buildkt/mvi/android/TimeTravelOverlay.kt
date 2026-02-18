@@ -59,12 +59,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.buildkt.mvi.StateSnapshot
 import com.buildkt.mvi.TimeTravelDebugger
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * A draggable floating toolbar for time-travel debugging that can be placed anywhere on screen.
@@ -88,7 +88,7 @@ import kotlin.math.roundToInt
 fun <S, I : Any> TimeTravelOverlay(
     timeTravelDebugger: TimeTravelDebugger<S, I, NavigationEvent, UiEvent>,
     modifier: Modifier = Modifier,
-    saveHistory: ((history: List<StateSnapshot<S, I>>) -> Unit)? = null,
+    saveHistory: ((history: List<StateSnapshot<S, I>>) -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     var isExpanded by remember { mutableStateOf(false) }
@@ -123,77 +123,85 @@ fun <S, I : Any> TimeTravelOverlay(
     // Draggable toolbar
     Card(
         modifier =
-            modifier
-                .onPlaced { coordinates ->
-                    // Get parent container size
-                    val parentLayoutCoordinates = coordinates.parentLayoutCoordinates
-                    if (parentLayoutCoordinates != null) {
-                        val parentBounds = parentLayoutCoordinates.size
-                        parentSize = Size(parentBounds.width.toFloat(), parentBounds.height.toFloat())
+        modifier
+            .onPlaced { coordinates ->
+                // Get parent container size
+                val parentLayoutCoordinates = coordinates.parentLayoutCoordinates
+                if (parentLayoutCoordinates != null) {
+                    val parentBounds = parentLayoutCoordinates.size
+                    parentSize =
+                        Size(parentBounds.width.toFloat(), parentBounds.height.toFloat())
 
-                        // Get initial position relative to parent (accounts for alignment)
-                        val position = coordinates.positionInParent()
-                        if (initialPosition == null) {
-                            initialPosition = position
+                    // Get initial position relative to parent (accounts for alignment)
+                    val position = coordinates.positionInParent()
+                    if (initialPosition == null) {
+                        initialPosition = position
+                    }
+                }
+            }.offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+            .clip(shape = RoundedCornerShape(size = 8.dp))
+            .onSizeChanged { size ->
+                toolbarSize =
+                    Size(width = size.width.toFloat(), height = size.height.toFloat())
+            }
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    // Calculate new position with bounds checking
+                    val newX = offsetX + dragAmount.x
+                    val newY = offsetY + dragAmount.y
+
+                    // Constrain X: keep toolbar within parent bounds horizontally
+                    val toolbarWidth = if (toolbarSize.width > 0) toolbarSize.width else 400f
+                    val maxX =
+                        if (parentSize.width > 0) {
+                            parentSize.width - toolbarWidth
+                        } else {
+                            Float.MAX_VALUE // No constraint if parent size unknown
                         }
-                    }
-                }.offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-                .clip(shape = RoundedCornerShape(size = 8.dp))
-                .onSizeChanged { size -> toolbarSize = Size(width = size.width.toFloat(), height = size.height.toFloat()) }
-                .pointerInput(Unit) {
-                    detectDragGestures { change, dragAmount ->
-                        change.consume()
-                        // Calculate new position with bounds checking
-                        val newX = offsetX + dragAmount.x
-                        val newY = offsetY + dragAmount.y
+                    offsetX = newX.coerceIn(0f, maxX.coerceAtLeast(0f))
 
-                        // Constrain X: keep toolbar within parent bounds horizontally
-                        val toolbarWidth = if (toolbarSize.width > 0) toolbarSize.width else 400f
-                        val maxX =
-                            if (parentSize.width > 0) {
-                                parentSize.width - toolbarWidth
-                            } else {
-                                Float.MAX_VALUE // No constraint if parent size unknown
-                            }
-                        offsetX = newX.coerceIn(0f, maxX.coerceAtLeast(0f))
-
-                        // Constrain Y: keep toolbar within parent bounds vertically
-                        // Since we start at the bottom, we need to account for that
-                        val toolbarHeight = if (toolbarSize.height > 0) toolbarSize.height else 100f
-                        val maxY =
-                            if (parentSize.height > 0) {
-                                // Max Y is when toolbar is at the top (offset = 0)
-                                // Min Y is when toolbar is at the bottom (offset = parentHeight - toolbarHeight - initialY)
-                                val initialY = initialPosition?.y ?: 0f
-                                parentSize.height - toolbarHeight - initialY
-                            } else {
-                                Float.MAX_VALUE // No constraint if parent size unknown
-                            }
-                        // Y offset can be negative (moving up from bottom) or positive (moving down)
-                        // But we need to keep it within bounds
-                        offsetY = newY.coerceIn(-(initialPosition?.y ?: 0f), maxY.coerceAtLeast(0f))
-                    }
-                },
+                    // Constrain Y: keep toolbar within parent bounds vertically
+                    // Since we start at the bottom, we need to account for that
+                    val toolbarHeight = if (toolbarSize.height > 0) toolbarSize.height else 100f
+                    val maxY =
+                        if (parentSize.height > 0) {
+                            // Max Y is when toolbar is at the top (offset = 0)
+                            // Min Y is when toolbar is at the bottom (offset = parentHeight - toolbarHeight - initialY)
+                            val initialY = initialPosition?.y ?: 0f
+                            parentSize.height - toolbarHeight - initialY
+                        } else {
+                            Float.MAX_VALUE // No constraint if parent size unknown
+                        }
+                    // Y offset can be negative (moving up from bottom) or positive (moving down)
+                    // But we need to keep it within bounds
+                    offsetY = newY.coerceIn(-(initialPosition?.y ?: 0f), maxY.coerceAtLeast(0f))
+                }
+            }
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         ) {
             // Toolbar row - always visible and draggable
             Row(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(all = 8.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(all = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Expand/collapse button
                 IconButton(
-                    onClick = { isExpanded = !isExpanded },
+                    onClick = { isExpanded = !isExpanded }
                 ) {
                     Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        imageVector = if (isExpanded) {
+                            Icons.Default.KeyboardArrowUp
+                        } else {
+                            Icons.Default.KeyboardArrowDown
+                        },
+                        contentDescription = if (isExpanded) "Collapse" else "Expand"
                     )
                 }
                 // History info
@@ -201,21 +209,23 @@ fun <S, I : Any> TimeTravelOverlay(
                     text = "${currentIndex + 1}/${history.size}",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
                 // Current intent (visible when collapsed)
                 val currentSnapshot = history.getOrNull(currentIndex)
-                val intentLabel = currentSnapshot?.intent?.let { it::class.simpleName ?: "Unknown" } ?: "Initial State"
+                val intentLabel =
+                    currentSnapshot?.intent?.let { it::class.simpleName ?: "Unknown" }
+                        ?: "Initial State"
                 Text(
                     text = intentLabel,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
                     maxLines = 1,
                     modifier =
-                        Modifier
-                            .weight(1f, fill = false)
-                            .padding(horizontal = 8.dp),
+                    Modifier
+                        .weight(1f, fill = false)
+                        .padding(horizontal = 8.dp)
                 )
 
                 // Navigation controls
@@ -227,11 +237,11 @@ fun <S, I : Any> TimeTravelOverlay(
                             }
                         }
                     },
-                    enabled = currentIndex > 0,
+                    enabled = currentIndex > 0
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Previous",
+                        contentDescription = "Previous"
                     )
                 }
 
@@ -243,11 +253,11 @@ fun <S, I : Any> TimeTravelOverlay(
                             }
                         }
                     },
-                    enabled = currentIndex < history.lastIndex,
+                    enabled = currentIndex < history.lastIndex
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Next",
+                        contentDescription = "Next"
                     )
                 }
 
@@ -258,11 +268,11 @@ fun <S, I : Any> TimeTravelOverlay(
                             scope.launch {
                                 saveHistory(history)
                             }
-                        },
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Save,
-                            contentDescription = "Save",
+                            contentDescription = "Save"
                         )
                     }
                 }
@@ -272,30 +282,31 @@ fun <S, I : Any> TimeTravelOverlay(
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut(),
+                exit = shrinkVertically() + fadeOut()
             ) {
                 Column(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(HISTORY_LIST_HEIGHT)
-                            .padding(horizontal = 8.dp)
-                            .padding(top = 8.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .height(HISTORY_LIST_HEIGHT)
+                        .padding(horizontal = 8.dp)
+                        .padding(top = 8.dp)
                 ) {
                     // History header
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "State History",
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Current: ${currentIndex + 1} / ${(history.lastIndex + 1).coerceAtLeast(0)}",
-                            style = MaterialTheme.typography.bodySmall,
+                            text = "Current: ${currentIndex + 1} / ${(history.lastIndex + 1)
+                                .coerceAtLeast(0)}",
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
 
@@ -305,10 +316,10 @@ fun <S, I : Any> TimeTravelOverlay(
                     LazyColumn(
                         state = listState,
                         modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         itemsIndexed(history) { index, stateHistory ->
                             val previousSnapshot = history.getOrNull(index - 1)
@@ -320,7 +331,7 @@ fun <S, I : Any> TimeTravelOverlay(
                                     scope.launch {
                                         timeTravelDebugger.restoreStateFromHistory(index)
                                     }
-                                },
+                                }
                             )
                         }
                     }
@@ -335,7 +346,7 @@ private fun <S, I> HistoryItem(
     stateHistory: StateSnapshot<S, I>,
     previousSnapshot: StateSnapshot<S, I>?,
     isSelected: Boolean,
-    onClick: () -> Unit,
+    onClick: () -> Unit
 ) {
     val dateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
     val timeString = dateFormat.format(Date(stateHistory.timestamp))
@@ -351,67 +362,69 @@ private fun <S, I> HistoryItem(
 
     Card(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-            ),
+        CardDefaults.cardColors(
+            containerColor =
+            if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        ),
         elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = if (isSelected) 4.dp else 2.dp,
-            ),
+        CardDefaults.cardElevation(
+            defaultElevation = if (isSelected) 4.dp else 2.dp
+        )
     ) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "#${stateHistory.index + 1}",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color =
-                        if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
                 Text(
                     text = timeString,
                     style = MaterialTheme.typography.labelSmall,
                     color =
-                        if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        },
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = stateHistory.intent?.let { it::class.simpleName ?: "Unknown" } ?: "Initial State",
+                text =
+                stateHistory.intent?.let { it::class.simpleName ?: "Unknown" }
+                    ?: "Initial State",
                 style = MaterialTheme.typography.bodyMedium,
                 color =
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
 
             // State with diff highlighting when we have a previous state to compare
@@ -422,7 +435,7 @@ private fun <S, I> HistoryItem(
                         previousState = previousSnapshot?.state?.toString(),
                         defaultColor = defaultTextColor,
                         addedColor = addedColor,
-                        maxLength = MAX_STATE_STRING_LENGTH,
+                        maxLength = MAX_STATE_STRING_LENGTH
                     )
                 }
 
@@ -431,7 +444,7 @@ private fun <S, I> HistoryItem(
                 Text(
                     text = removedLine,
                     style = MaterialTheme.typography.bodySmall,
-                    color = removedColor,
+                    color = removedColor
                 )
             }
 
@@ -439,7 +452,7 @@ private fun <S, I> HistoryItem(
 
             Text(
                 text = stateAnnotatedString,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
@@ -456,7 +469,7 @@ private fun buildStateDiffAnnotatedString(
     previousState: String?,
     defaultColor: Color,
     addedColor: Color,
-    maxLength: Int,
+    maxLength: Int
 ): Pair<AnnotatedString, String?> {
     val currentTruncated =
         if (currentState.length > maxLength) {
@@ -469,9 +482,9 @@ private fun buildStateDiffAnnotatedString(
         return Pair(
             AnnotatedString(
                 text = currentTruncated,
-                spanStyle = SpanStyle(color = defaultColor),
+                spanStyle = SpanStyle(color = defaultColor)
             ),
-            null,
+            null
         )
     }
 
@@ -509,7 +522,7 @@ private fun buildStateDiffAnnotatedString(
                 lengthSoFar += segmentWithDelim.length
             }
         },
-        removedLine,
+        removedLine
     )
 }
 

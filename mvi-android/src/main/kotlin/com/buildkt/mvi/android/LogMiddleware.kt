@@ -51,7 +51,7 @@ fun <S, I> logMiddleware(block: LogMiddlewareConfig.() -> Unit = {}): LogMiddlew
  * @param config The configuration for the log middleware.
  */
 class LogMiddleware<S, I> internal constructor(
-    private val config: LogMiddlewareConfig = LogMiddlewareConfig(),
+    private val config: LogMiddlewareConfig = LogMiddlewareConfig()
 ) : Middleware<S, I>() {
     override suspend fun onIntent(intent: I) {
         if (!config.logIntent || intent == null) return
@@ -61,10 +61,7 @@ class LogMiddleware<S, I> internal constructor(
         log(config.tag, "└")
     }
 
-    override suspend fun onStateReduced(
-        newState: S,
-        intent: I,
-    ) {
+    override suspend fun onStateReduced(newState: S, intent: I) {
         if (!config.logState || newState == null || intent == null) return
 
         log(config.tag, "┌ STATE")
@@ -72,10 +69,7 @@ class LogMiddleware<S, I> internal constructor(
         log(config.tag, "└ (Caused by ${intent::class.simpleName})")
     }
 
-    override suspend fun onSideEffect(
-        sideEffect: SideEffect<S, I>,
-        intent: I,
-    ) {
+    override suspend fun onSideEffect(sideEffect: SideEffect<S, I>, intent: I) {
         if (!config.logSideEffectStart || intent == null) return
 
         log(config.tag, "┌ SIDE EFFECT (START)")
@@ -83,10 +77,7 @@ class LogMiddleware<S, I> internal constructor(
         log(config.tag, "└ (Triggered by ${intent::class.simpleName})")
     }
 
-    override suspend fun onSideEffectResult(
-        result: SideEffectResult<I>,
-        intent: I,
-    ) {
+    override suspend fun onSideEffectResult(result: SideEffectResult<I>, intent: I) {
         if (!config.logSideEffectResult || intent == null) return
 
         log(config.tag, "┌ SIDE EFFECT (RESULT)")
@@ -94,10 +85,7 @@ class LogMiddleware<S, I> internal constructor(
         log(config.tag, "└ (From ${intent::class.simpleName})")
     }
 
-    private fun log(
-        tag: String,
-        message: String,
-    ) {
+    private fun log(tag: String, message: String) {
         when (config.logLevel) {
             Log.VERBOSE -> Log.v(tag, message)
             Log.DEBUG -> Log.d(tag, message)
@@ -125,5 +113,5 @@ data class LogMiddlewareConfig(
     var logIntent: Boolean = true,
     var logState: Boolean = true,
     var logSideEffectStart: Boolean = true,
-    var logSideEffectResult: Boolean = true,
+    var logSideEffectResult: Boolean = true
 )
