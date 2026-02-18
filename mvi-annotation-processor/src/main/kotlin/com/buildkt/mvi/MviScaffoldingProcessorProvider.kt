@@ -8,6 +8,6 @@ class MviScaffoldingProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
         MviScaffoldingProcessor(
             codeGenerator = environment.codeGenerator,
-            logger = environment.logger,
+            logger = environment.logger
         )
 }

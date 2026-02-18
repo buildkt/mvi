@@ -5,7 +5,7 @@ plugins {
 }
 val artifactId = "annotation-processor"
 group = "com.buildkt.mvi"
-version = "0.2.0"
+version = "0.2.1"
 
 kotlin {
     jvmToolchain(jdkVersion = 11)
@@ -25,7 +25,7 @@ mavenPublishing {
     coordinates(
         group.toString(),
         artifactId,
-        version.toString(),
+        version.toString()
     )
 
     pom {
