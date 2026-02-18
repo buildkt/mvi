@@ -47,9 +47,8 @@ class MviScaffoldingProcessor(
         val sideEffectIntents = resolver.getSymbolsWithAnnotation(
             TriggersSideEffect::class.qualifiedName!!
         )
-        val (validSideEffectIntentSymbols, invalidSideEffectIntentSymbols) = sideEffectIntents.partition {
-            it.validate()
-        }
+        val (validSideEffectIntentSymbols, invalidSideEffectIntentSymbols) =
+            sideEffectIntents.partition { it.validate() }
 
         validPaneSymbols
             .filterIsInstance<KSFunctionDeclaration>()
@@ -358,7 +357,7 @@ class MviScaffoldingProcessor(
                     PropertySpec
                         .builder("reducer", reducerType)
                         .mutable(true)
-                        .initializer("%T { state, _ -> state }", MEMBER_REDUCER) // Default no-op reducer
+                        .initializer("%T { state, _ -> state }", MEMBER_REDUCER) // Default no-op
                         .build()
                 ).addProperty(
                     PropertySpec
@@ -625,11 +624,35 @@ class MviScaffoldingProcessor(
                 val basePath = "val $name = backStackEntry.arguments?.getString(\"$name\")"
 
                 when (nonNullTypeName) {
-                    STRING -> if (isNullable) basePath else """$basePath ?: error("'$name' argument is required")"""
-                    LONG -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toLongOrNull()""" else """$basePath?.toLongOrNull() ?: error("'$name' argument must be Long")"""
-                    INT -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toIntOrNull()""" else """$basePath?.toIntOrNull() ?: error("'$name' argument must be Int")"""
-                    BOOLEAN -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toBoolean()""" else """$basePath?.toBoolean() ?: error("'$name' argument must be Boolean")"""
-                    FLOAT -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toFloatOrNull()""" else """$basePath?.toFloatOrNull() ?: error("'$name' argument must be Float")"""
+                    STRING -> when {
+                        isNullable -> basePath
+                        else -> """$basePath ?: error("'$name' argument is required")"""
+                    }
+
+                    LONG -> if (isNullable) {
+                        """val $name = backStackEntry.arguments?.getString("$name")?.toLongOrNull()"""
+                    } else {
+                        """$basePath?.toLongOrNull() ?: error("'$name' argument must be Long")"""
+                    }
+
+                    INT -> if (isNullable) {
+                        """val $name = backStackEntry.arguments?.getString("$name")?.toIntOrNull()"""
+                    } else {
+                        """$basePath?.toIntOrNull() ?: error("'$name' argument must be Int")"""
+                    }
+
+                    BOOLEAN -> if (isNullable) {
+                        """val $name = backStackEntry.arguments?.getString("$name")?.toBoolean()"""
+                    } else {
+                        """$basePath?.toBoolean() ?: error("'$name' argument must be Boolean")"""
+                    }
+
+                    FLOAT -> if (isNullable) {
+                        """val $name = backStackEntry.arguments?.getString("$name")?.toFloatOrNull()"""
+                    } else {
+                        """$basePath?.toFloatOrNull() ?: error("'$name' argument must be Float")"""
+                    }
+
                     else -> {
                         if (!isNullable) {
                             logger.warn(
@@ -660,7 +683,6 @@ class MviScaffoldingProcessor(
         }
         val composableArgsString = composableArgs.joinToString(separator = ",\n        ")
         val uiStateTypeName = uiStateDeclaration.toClassName()
-        val intentTypeName = intentDeclaration.toClassName()
 
         val paneFunctionName = paneFunction.simpleName.asString()
 
