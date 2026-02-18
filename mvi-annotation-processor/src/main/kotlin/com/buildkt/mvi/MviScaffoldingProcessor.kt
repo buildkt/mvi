@@ -538,17 +538,25 @@ class MviScaffoldingProcessor(
             navArguments.joinToString("\n") { navArg ->
                 val name = navArg.name
                 val typeName = navArg.typeName
+                val isNullable = typeName.isNullable
+                val nonNullTypeName = typeName.copy(nullable = false)
                 val basePath = "val $name = backStackEntry.arguments?.getString(\"$name\")"
 
-                when (typeName) {
-                    STRING -> """$basePath ?: error("'$name' argument is required")"""
-                    LONG -> """$basePath?.toLongOrNull() ?: error("'$name' argument must be Long")"""
-                    INT -> """$basePath?.toIntOrNull() ?: error("'$name' argument must be Int")"""
-                    BOOLEAN -> """$basePath?.toBoolean() ?: error("'$name' argument must be Boolean")"""
-                    FLOAT -> """$basePath?.toFloatOrNull() ?: error("'$name' argument must be Float")"""
+                when (nonNullTypeName) {
+                    STRING -> if (isNullable) basePath else """$basePath ?: error("'$name' argument is required")"""
+                    LONG -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toLongOrNull()""" else """$basePath?.toLongOrNull() ?: error("'$name' argument must be Long")"""
+                    INT -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toIntOrNull()""" else """$basePath?.toIntOrNull() ?: error("'$name' argument must be Int")"""
+                    BOOLEAN -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toBoolean()""" else """$basePath?.toBoolean() ?: error("'$name' argument must be Boolean")"""
+                    FLOAT -> if (isNullable) """val $name = backStackEntry.arguments?.getString("$name")?.toFloatOrNull()""" else """$basePath?.toFloatOrNull() ?: error("'$name' argument must be Float")"""
                     else -> {
-                        logger.warn("Unsupported NavArgument type '$typeName' for '$name'.Mapping as Parcelable.")
-                        """    val $name: $typeName = backStackEntry.arguments?.getParcelable("$name")!!"""
+                        if (!isNullable) {
+                            logger.warn("Unsupported NavArgument type '$typeName' for '$name'. Mapping as Parcelable.")
+                        }
+                        if (isNullable) {
+                            """val $name: $typeName = backStackEntry.arguments?.getParcelable("$name")"""
+                        } else {
+                            """val $name: $typeName = backStackEntry.arguments?.getParcelable("$name")!!"""
+                        }
                     }
                 }
             }
