@@ -1,0 +1,113 @@
+# Library modules
+mvi-core:
+  - changed-files:
+      - any-glob-to-any-file: library/mvi/core/**
+
+mvi-android:
+  - changed-files:
+      - any-glob-to-any-file: library/mvi/android/**
+
+mvi-annotation:
+  - changed-files:
+      - any-glob-to-any-file: library/mvi/annotation/**
+
+mvi-annotation-processor:
+  - changed-files:
+      - any-glob-to-any-file: library/mvi/annotation-processor/**
+
+design-system:
+  - changed-files:
+      - any-glob-to-any-file: library/design-system/**
+
+design-system-bootstrap:
+  - changed-files:
+      - any-glob-to-any-file: library/design-system-bootstrap/**
+
+# Apps
+app:showcase:
+  - changed-files:
+      - any-glob-to-any-file: apps/showcase-app/**
+
+app:playground:
+  - changed-files:
+      - any-glob-to-any-file: apps/playground/**
+
+app:habit:
+  - changed-files:
+      - any-glob-to-any-file: apps/habit/**
+
+app:electronics:
+  - changed-files:
+      - any-glob-to-any-file: apps/electronics/**
+
+app:supermarket:
+  - changed-files:
+      - any-glob-to-any-file: apps/supermarket/**
+
+app:restaurants:
+  - changed-files:
+      - any-glob-to-any-file: apps/restaurants/**
+
+app:railguide:
+  - changed-files:
+      - any-glob-to-any-file: apps/railguide/**
+
+# Samples
+sample:account:
+  - changed-files:
+      - any-glob-to-any-file: samples/account/**
+
+sample:address:
+  - changed-files:
+      - any-glob-to-any-file: samples/address/**
+
+sample:auth:
+  - changed-files:
+      - any-glob-to-any-file: samples/auth/**
+
+sample:checkout:
+  - changed-files:
+      - any-glob-to-any-file: samples/checkout/**
+
+sample:credit-card:
+  - changed-files:
+      - any-glob-to-any-file: samples/credit-card/**
+
+sample:product:
+  - changed-files:
+      - any-glob-to-any-file: samples/product/**
+
+sample:review:
+  - changed-files:
+      - any-glob-to-any-file: samples/review/**
+
+sample:user-info:
+  - changed-files:
+      - any-glob-to-any-file: samples/user-info/**
+
+# Template
+template:
+  - changed-files:
+      - any-glob-to-any-file: template/**
+
+# Build and CI
+build-logic:
+  - changed-files:
+      - any-glob-to-any-file: build-logic/**
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
+
+gradle:
+  - changed-files:
+      - any-glob-to-any-file:
+          - gradle/**
+          - "*.gradle.kts"
+          - gradle.properties
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.md"
+          - docs/**
