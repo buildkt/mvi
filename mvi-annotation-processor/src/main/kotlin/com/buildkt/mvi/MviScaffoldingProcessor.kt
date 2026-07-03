@@ -33,10 +33,7 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import java.util.Locale
 
-class MviScaffoldingProcessor(
-    private val codeGenerator: CodeGenerator,
-    private val logger: KSPLogger
-) : SymbolProcessor {
+class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private val logger: KSPLogger) : SymbolProcessor {
     // Helper data class to hold nav argument info
     private data class NavArgumentInfo(val name: String, val typeName: TypeName)
 
@@ -146,7 +143,7 @@ class MviScaffoldingProcessor(
     private data class MviScreenConfig(
         val uiStateDeclaration: KSClassDeclaration,
         val intentDeclaration: KSClassDeclaration,
-        val requiresInitialState: Boolean
+        val requiresInitialState: Boolean,
     )
 
     private fun getMviDeclarationsFromAnnotation(
@@ -158,9 +155,7 @@ class MviScaffoldingProcessor(
         }
         val uiStateArgument = annotation.arguments.first { it.name?.asString() == "uiState" }
         val intentArgument = annotation.arguments.first { it.name?.asString() == "intent" }
-        val requiresInitialStateArgument = annotation.arguments.find {
-            it.name?.asString() == "requiresInitialState"
-        }
+        val requiresInitialStateArgument = annotation.arguments.find { it.name?.asString() == "requiresInitialState" }
 
         val uiStateType = uiStateArgument.value as KSType
         val intentType = intentArgument.value as KSType
@@ -723,12 +718,12 @@ class MviScaffoldingProcessor(
             |   CollectNavigationEvents(viewModel, navController)
             |
             |   $argumentExtractionBlock
-            |   
+            |
             |   Box(modifier = Modifier.fillMaxSize()) {
             |       $paneFunctionName(
             |            $composableArgsString
             |       )
-            |       
+            |
             |       if (config.timeTravelDebugging?.enableTimeTravelOverlayUi == true) {
             |           viewModel.getTimeTravelDebugger()?.let { timeTravelDebugger ->
             |               val stateHistoryStorage = config.timeTravelDebugging?.stateHistoryStorage
@@ -745,8 +740,7 @@ class MviScaffoldingProcessor(
             |       }
             |   }
             |}
-            """
-            .trimMargin()
+        """.trimMargin()
 
         if (requiresInitialState) {
             navFunBuilder.addCode(
