@@ -12,7 +12,6 @@ version = "0.2.0"
 kotlin {
     jvmToolchain(jdkVersion = 17)
 }
-
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()

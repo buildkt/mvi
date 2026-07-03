@@ -59,9 +59,7 @@ sealed class SideEffectResult<out I> {
     }
 
     /** Indicates that the side effect produced a single new intent to be processed. */
-    data class NewIntent<I>(
-        val intent: I,
-    ) : SideEffectResult<I>() {
+    data class NewIntent<I>(val intent: I,) : SideEffectResult<I>() {
         override fun plus(other: SideEffectResult<I>): SideEffectResult<I> {
             val thisAsFlow = flowOf(this.intent)
             return when (other) {
@@ -74,9 +72,7 @@ sealed class SideEffectResult<out I> {
     }
 
     /** Indicates that the side effect produced a stream of new intents to be processed over time. */
-    data class NewIntents<I>(
-        val intents: Flow<I>,
-    ) : SideEffectResult<I>() {
+    data class NewIntents<I>(val intents: Flow<I>,) : SideEffectResult<I>() {
         override fun plus(other: SideEffectResult<I>): SideEffectResult<I> =
             when (other) {
                 is NewIntent -> NewIntents(merge(this.intents, flowOf(other.intent)))
@@ -91,9 +87,7 @@ sealed class SideEffectResult<out I> {
      * The [event] is a generic object to be interpreted by a platform-specific navigation handler,
      * ensuring this core library remains platform-agnostic.
      */
-    data class Navigation(
-        val event: Any,
-    ) : SideEffectResult<Nothing>() {
+    data class Navigation(val event: Any,) : SideEffectResult<Nothing>() {
         override fun plus(other: SideEffectResult<Nothing>): SideEffectResult<Nothing> {
             // Navigation combined with anything that has intents results in the intents taking precedence.
             return when (other) {
@@ -107,9 +101,7 @@ sealed class SideEffectResult<out I> {
      * Indicates that a transient UI event (like a Toast or Snackbar) should be shown.
      * The [event] is a generic object to be interpreted by a platform-specific UI event handler.
      */
-    data class ShowUiEvent(
-        val event: Any,
-    ) : SideEffectResult<Nothing>() {
+    data class ShowUiEvent(val event: Any,) : SideEffectResult<Nothing>() {
         override fun plus(other: SideEffectResult<Nothing>): SideEffectResult<Nothing> {
             // UI events follow the same precedence logic as Navigation events.
             return when (other) {
@@ -130,9 +122,8 @@ sealed class SideEffectResult<out I> {
  * @param S The type of the screen's state.
  * @param I The type of the screen's intents.
  */
-class ParallelSideEffect<S, I : Any> internal constructor(
-    private vararg val sideEffects: SideEffect<S, I>?,
-) : SideEffect<S, I> {
+class ParallelSideEffect<S, I : Any> internal constructor(private vararg val sideEffects: SideEffect<S, I>?,) :
+    SideEffect<S, I> {
     @OptIn(ExperimentalCoroutinesApi::class)
     override suspend fun invoke(
         state: S,
@@ -189,7 +180,9 @@ fun <S, I> noOpSideEffect(): SideEffect<S, I> = SideEffect { _, _ -> SideEffectR
  * @param sideEffects A vararg of `SideEffect` instances to be executed concurrently.
  * @return A [ParallelSideEffect] instance.
  */
-fun <S, I : Any> parallelSideEffect(vararg sideEffects: SideEffect<S, I>?): SideEffect<S, I> = ParallelSideEffect(*sideEffects)
+fun <S, I : Any> parallelSideEffect(
+    vararg sideEffects: SideEffect<S, I>?
+): SideEffect<S, I> = ParallelSideEffect(*sideEffects)
 
 /**
  * Creates a [SideEffect] that starts an observable stream of work and can emit multiple new intents
