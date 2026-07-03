@@ -195,9 +195,7 @@ class StateHistoryStorageTest {
             assertEquals(TestState(value = 1000), loaded[1000].state)
         }
 
-    private data class TestState(
-        val value: Int,
-    )
+    private data class TestState(val value: Int)
 
     private sealed interface TestIntent {
         data object Increment : TestIntent

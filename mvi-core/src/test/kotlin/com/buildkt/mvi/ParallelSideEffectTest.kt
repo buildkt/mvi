@@ -3,9 +3,9 @@ package com.buildkt.mvi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.Test
 
 class ParallelSideEffectTest {
     @Test
@@ -92,16 +92,10 @@ class ParallelSideEffectTest {
     private sealed interface TestIntent {
         data object Trigger : TestIntent
 
-        data class Result1(
-            val data: String,
-        ) : TestIntent
+        data class Result1(val data: String) : TestIntent
 
-        data class Result2(
-            val data: String,
-        ) : TestIntent
+        data class Result2(val data: String) : TestIntent
 
-        data class ResultFromFlow(
-            val index: Int,
-        ) : TestIntent
+        data class ResultFromFlow(val index: Int) : TestIntent
     }
 }
