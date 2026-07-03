@@ -10,12 +10,8 @@ package com.buildkt.mvi
  * @param index The index of this state in the history (0-based). Defaults to -1 if not set.
  *              Must be >= -1. Values less than -1 are invalid.
  */
-data class StateSnapshot<S, I>(
-    val state: S,
-    val intent: I?,
-    val timestamp: Long = System.currentTimeMillis(),
-    val index: Int = -1,
-) {
+data class StateSnapshot<S, I>(val state: S, val intent: I?, val timestamp: Long = System.currentTimeMillis(), val index: Int = -1) {
+
     init {
         require(index >= -1) { "Index must be >= -1, but was $index" }
     }

@@ -122,8 +122,8 @@ sealed class SideEffectResult<out I> {
  * @param S The type of the screen's state.
  * @param I The type of the screen's intents.
  */
-class ParallelSideEffect<S, I : Any> internal constructor(private vararg val sideEffects: SideEffect<S, I>?,) :
-    SideEffect<S, I> {
+class ParallelSideEffect<S, I : Any> internal constructor(private vararg val sideEffects: SideEffect<S, I>?,) : SideEffect<S, I> {
+
     @OptIn(ExperimentalCoroutinesApi::class)
     override suspend fun invoke(
         state: S,
