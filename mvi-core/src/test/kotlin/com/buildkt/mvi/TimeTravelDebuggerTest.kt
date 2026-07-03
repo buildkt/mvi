@@ -1,5 +1,11 @@
 package com.buildkt.mvi
 
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -8,12 +14,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
-import kotlin.test.Test
 
 class TimeTravelDebuggerTest {
     @Test
@@ -119,9 +119,8 @@ class TimeTravelDebuggerTest {
             assertEquals(1, currentIndex!!.first())
         }
 
-    private class MockDebuggableStateHolder(
-        private val shouldThrow: Boolean = false,
-    ) : DebuggableStateHolder<TestState, TestIntent, String, String> {
+    private class MockDebuggableStateHolder(private val shouldThrow: Boolean = false) :
+        DebuggableStateHolder<TestState, TestIntent, String, String> {
         var restoredState: TestState? = null
         val intentCalls = mutableListOf<TestIntent>()
 
@@ -147,9 +146,7 @@ class TimeTravelDebuggerTest {
         }
     }
 
-    private data class TestState(
-        val value: Int,
-    )
+    private data class TestState(val value: Int)
 
     private sealed interface TestIntent {
         data object Increment : TestIntent

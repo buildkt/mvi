@@ -1,11 +1,11 @@
 package com.buildkt.mvi
 
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.test.Test
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 
 class TimeTravelMiddlewareTest {
     @Test

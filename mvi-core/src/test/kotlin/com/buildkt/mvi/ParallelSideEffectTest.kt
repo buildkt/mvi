@@ -1,11 +1,11 @@
 package com.buildkt.mvi
 
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.test.Test
 
 class ParallelSideEffectTest {
     @Test
