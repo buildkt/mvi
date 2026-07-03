@@ -35,7 +35,9 @@ class TimeTravelDebugger<State, Intent : Any, NavEvent, UiEvent>(
      * @param index The index of the state to restore.
      * @return true if the state was successfully restored, false otherwise.
      */
-    fun restoreStateFromHistory(index: Int): Boolean = timeTravelMiddleware.restoreStateAt(index) { state -> restoreState(state) }
+    fun restoreStateFromHistory(
+        index: Int
+    ): Boolean = timeTravelMiddleware.restoreStateAt(index) { state -> restoreState(state) }
 
     /**
      * Loads a history list into the middleware. This replaces the current history.

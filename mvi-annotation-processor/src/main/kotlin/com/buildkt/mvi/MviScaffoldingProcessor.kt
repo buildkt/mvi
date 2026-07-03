@@ -33,10 +33,7 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import java.util.Locale
 
-class MviScaffoldingProcessor(
-    private val codeGenerator: CodeGenerator,
-    private val logger: KSPLogger
-) : SymbolProcessor {
+class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private val logger: KSPLogger) : SymbolProcessor {
     // Helper data class to hold nav argument info
     private data class NavArgumentInfo(val name: String, val typeName: TypeName)
 
@@ -54,9 +51,9 @@ class MviScaffoldingProcessor(
             .filterIsInstance<KSFunctionDeclaration>()
             .forEach { paneFunction ->
                 try {
-                    val (uiStateDeclaration, intentDeclaration) = getMviDeclarationsFromAnnotation(
-                        paneFunction
-                    )
+                    val mviConfig = getMviDeclarationsFromAnnotation(paneFunction)
+                    val uiStateDeclaration = mviConfig.uiStateDeclaration
+                    val intentDeclaration = mviConfig.intentDeclaration
 
                     validatePaneFunction(paneFunction, uiStateDeclaration, intentDeclaration)
 
@@ -91,7 +88,8 @@ class MviScaffoldingProcessor(
                             intentDeclaration,
                             sideEffectBuilderClassName,
                             sideEffectMapClassName,
-                            relevantIntents
+                            relevantIntents,
+                            mviConfig.requiresInitialState
                         )
                     val (viewModelClassName, factoryClassName) =
                         generateViewModel(
@@ -108,7 +106,8 @@ class MviScaffoldingProcessor(
                         configClassName,
                         uiStateDeclaration,
                         intentDeclaration,
-                        navArguments
+                        navArguments,
+                        mviConfig.requiresInitialState
                     )
                 } catch (e: Exception) {
                     logger.error(
@@ -141,22 +140,31 @@ class MviScaffoldingProcessor(
             }.toList()
     }
 
+    private data class MviScreenConfig(
+        val uiStateDeclaration: KSClassDeclaration,
+        val intentDeclaration: KSClassDeclaration,
+        val requiresInitialState: Boolean,
+    )
+
     private fun getMviDeclarationsFromAnnotation(
         paneFunction: KSFunctionDeclaration
-    ): Pair<KSClassDeclaration, KSClassDeclaration> {
+    ): MviScreenConfig {
         val annotation = paneFunction.annotations.first {
             it.shortName.asString() ==
                 MviScreen::class.simpleName
         }
         val uiStateArgument = annotation.arguments.first { it.name?.asString() == "uiState" }
         val intentArgument = annotation.arguments.first { it.name?.asString() == "intent" }
+        val requiresInitialStateArgument = annotation.arguments.find { it.name?.asString() == "requiresInitialState" }
 
         val uiStateType = uiStateArgument.value as KSType
         val intentType = intentArgument.value as KSType
+        val requiresInitialState = (requiresInitialStateArgument?.value as? Boolean) ?: false
 
-        return Pair(
-            uiStateType.declaration as KSClassDeclaration,
-            intentType.declaration as KSClassDeclaration
+        return MviScreenConfig(
+            uiStateDeclaration = uiStateType.declaration as KSClassDeclaration,
+            intentDeclaration = intentType.declaration as KSClassDeclaration,
+            requiresInitialState = requiresInitialState
         )
     }
 
@@ -331,7 +339,8 @@ class MviScaffoldingProcessor(
         intentDeclaration: KSClassDeclaration,
         sideEffectBuilderClassName: ClassName,
         sideEffectMapClassName: ClassName,
-        annotatedIntents: List<KSClassDeclaration>
+        annotatedIntents: List<KSClassDeclaration>,
+        requiresInitialState: Boolean
     ): ClassName {
         val packageName = paneFunction.packageName.asString()
         val baseName = paneFunction.simpleName.asString().removeSuffix("Pane")
@@ -577,7 +586,8 @@ class MviScaffoldingProcessor(
         configClassName: ClassName,
         uiStateDeclaration: KSClassDeclaration,
         intentDeclaration: KSClassDeclaration,
-        navArguments: List<NavArgumentInfo>
+        navArguments: List<NavArgumentInfo>,
+        requiresInitialState: Boolean
     ) {
         val packageName = paneFunction.packageName.asString()
         val paneName = paneFunction.simpleName.asString()
@@ -601,19 +611,26 @@ class MviScaffoldingProcessor(
                 .addImport("com.buildkt.mvi.android", "UiEvent")
                 .addImport("kotlinx.coroutines", "launch")
 
+        val uiStateTypeName = uiStateDeclaration.toClassName()
+
         val navFunBuilder =
             FunSpec
                 .builder(navFunName)
                 .receiver(MEMBER_NAV_GRAPH_BUILDER)
                 .addParameter("navController", MEMBER_NAV_CONTROLLER)
                 .addParameter("route", String::class)
-                .addParameter(
-                    "config",
-                    LambdaTypeName.get(
-                        receiver = configClassName,
-                        returnType = UNIT
-                    )
-                )
+
+        if (requiresInitialState) {
+            navFunBuilder.addParameter("initialState", uiStateTypeName)
+        }
+
+        navFunBuilder.addParameter(
+            "config",
+            LambdaTypeName.get(
+                receiver = configClassName,
+                returnType = UNIT
+            )
+        )
 
         val argumentExtractionBlock =
             navArguments.joinToString("\n") { navArg ->
@@ -682,27 +699,31 @@ class MviScaffoldingProcessor(
             composableArgs.add("$argName = $argName")
         }
         val composableArgsString = composableArgs.joinToString(separator = ",\n        ")
-        val uiStateTypeName = uiStateDeclaration.toClassName()
 
         val paneFunctionName = paneFunction.simpleName.asString()
 
-        navFunBuilder.addCode(
-            """
+        val initialStateCode = if (requiresInitialState) {
+            "val resolvedInitialState = config.initialState ?: initialState"
+        } else {
+            "val resolvedInitialState = config.initialState ?: %T()"
+        }
+
+        val codeTemplate = """
             |composable(route = route) { backStackEntry ->
             |   val config = %T().apply(config)
-            |   val initialState = %T()
-            |   val viewModel: %T = viewModel(factory = %T(initialState = initialState, reducer = config.reducer, sideEffects = config.getSideEffects(), middlewares = config.middlewares))
+            |   $initialStateCode
+            |   val viewModel: %T = viewModel(factory = %T(initialState = resolvedInitialState, reducer = config.reducer, sideEffects = config.getSideEffects(), middlewares = config.middlewares))
             |   val state by viewModel.uiState.collectAsState()
             |
             |   CollectNavigationEvents(viewModel, navController)
             |
             |   $argumentExtractionBlock
-            |   
+            |
             |   Box(modifier = Modifier.fillMaxSize()) {
             |       $paneFunctionName(
             |            $composableArgsString
             |       )
-            |       
+            |
             |       if (config.timeTravelDebugging?.enableTimeTravelOverlayUi == true) {
             |           viewModel.getTimeTravelDebugger()?.let { timeTravelDebugger ->
             |               val stateHistoryStorage = config.timeTravelDebugging?.stateHistoryStorage
@@ -719,12 +740,24 @@ class MviScaffoldingProcessor(
             |       }
             |   }
             |}
-            """.trimMargin(),
-            configClassName,
-            uiStateTypeName,
-            viewModelClassName,
-            factoryClassName
-        )
+        """.trimMargin()
+
+        if (requiresInitialState) {
+            navFunBuilder.addCode(
+                codeTemplate,
+                configClassName,
+                viewModelClassName,
+                factoryClassName
+            )
+        } else {
+            navFunBuilder.addCode(
+                codeTemplate,
+                configClassName,
+                uiStateTypeName,
+                viewModelClassName,
+                factoryClassName
+            )
+        }
 
         fileBuilder
             .addFunction(navFunBuilder.build())

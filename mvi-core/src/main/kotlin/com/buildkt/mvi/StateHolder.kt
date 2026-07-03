@@ -181,7 +181,10 @@ class DefaultStateHolder<State, Intent : Any, NavEvent, UiEvent>(
                     is SideEffectResult.NewIntent -> onIntent(intent = result.intent)
                     is SideEffectResult.NewIntents -> result.intents.collect(collector = ::onIntent)
                     is SideEffectResult.ShowUiEvent -> _uiEvents.emit(value = result.event as? UiEvent ?: return@let)
-                    is SideEffectResult.Navigation -> _navigationEvents.emit(value = result.event as? NavEvent ?: return@let)
+                    is SideEffectResult.Navigation -> _navigationEvents.emit(
+                        value =
+                        result.event as? NavEvent ?: return@let
+                    )
                     is SideEffectResult.NoOp -> { /* Do nothing */ }
                 }
             }

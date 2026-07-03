@@ -50,9 +50,7 @@ fun <S, I> logMiddleware(block: LogMiddlewareConfig.() -> Unit = {}): LogMiddlew
  *
  * @param config The configuration for the log middleware.
  */
-class LogMiddleware<S, I> internal constructor(
-    private val config: LogMiddlewareConfig = LogMiddlewareConfig()
-) : Middleware<S, I>() {
+class LogMiddleware<S, I> internal constructor(private val config: LogMiddlewareConfig = LogMiddlewareConfig()) : Middleware<S, I>() {
     override suspend fun onIntent(intent: I) {
         if (!config.logIntent || intent == null) return
 

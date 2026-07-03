@@ -15,9 +15,13 @@ import kotlin.reflect.KClass
  * - A `NavGraphBuilder` extension function with a DSL for providing the `reducer`, `sideEffects`,
  *   and `middlewares`, seamlessly integrating the screen into the Navigation Component.
  *
- * @param uiState The [KClass] of the screen's state data class.
+ * @param uiState The [KClass] of the screen's state data class or sealed interface.
  * @param intent The [KClass] of the screen's sealed intent interface.
  * @param platform The target platform for which to generate code. Defaults to Android.
+ * @param requiresInitialState When true, the generated NavGraphBuilder extension function will
+ *        include an `initialState` parameter that must be provided by the caller. This is required
+ *        when the UiState is a sealed class/interface that cannot be instantiated with a default
+ *        constructor. When false (default), the UiState is expected to have a no-arg constructor.
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.SOURCE)
@@ -25,6 +29,7 @@ annotation class MviScreen(
     val uiState: KClass<*>,
     val intent: KClass<*>,
     val platform: Platform = Platform.ANDROID,
+    val requiresInitialState: Boolean = false,
 )
 
 /**
