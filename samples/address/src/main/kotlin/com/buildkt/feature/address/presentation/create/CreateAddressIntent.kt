@@ -1,7 +1,5 @@
 package com.buildkt.feature.address.presentation.create
 
-import com.buildkt.mvi.TriggersSideEffect
-
 sealed interface CreateAddressIntent {
     // Pane actions
     @TriggersSideEffect

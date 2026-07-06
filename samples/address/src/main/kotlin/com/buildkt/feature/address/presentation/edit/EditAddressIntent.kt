@@ -1,7 +1,6 @@
 package com.buildkt.feature.address.presentation.edit
 
 import com.buildkt.feature.address.domain.Address
-import com.buildkt.mvi.TriggersSideEffect
 
 sealed interface EditAddressIntent {
     // Pane actions

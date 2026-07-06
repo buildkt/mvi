@@ -9,6 +9,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.Modifier as KspModifier
 import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
@@ -33,19 +34,14 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import java.util.Locale
 
-class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private val logger: KSPLogger) : SymbolProcessor {
+class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private val logger: KSPLogger) :
+    SymbolProcessor {
     // Helper data class to hold nav argument info
     private data class NavArgumentInfo(val name: String, val typeName: TypeName)
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val paneSymbols = resolver.getSymbolsWithAnnotation(MviScreen::class.qualifiedName!!)
         val (validPaneSymbols, invalidPaneSymbols) = paneSymbols.partition { it.validate() }
-
-        val sideEffectIntents = resolver.getSymbolsWithAnnotation(
-            TriggersSideEffect::class.qualifiedName!!
-        )
-        val (validSideEffectIntentSymbols, invalidSideEffectIntentSymbols) =
-            sideEffectIntents.partition { it.validate() }
 
         validPaneSymbols
             .filterIsInstance<KSFunctionDeclaration>()
@@ -57,14 +53,7 @@ class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private 
 
                     validatePaneFunction(paneFunction, uiStateDeclaration, intentDeclaration)
 
-                    val relevantIntents =
-                        validSideEffectIntentSymbols
-                            .filterIsInstance<KSClassDeclaration>()
-                            .filter { intent ->
-                                intentDeclaration.asStarProjectedType().isAssignableFrom(
-                                    intent.asStarProjectedType()
-                                )
-                            }
+                    val relevantIntents = collectAllIntentClasses(intentDeclaration)
 
                     val navArguments = findNavArguments(paneFunction)
                     val sideEffectMapClassName =
@@ -117,7 +106,32 @@ class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private 
                 }
             }
 
-        return invalidPaneSymbols + invalidSideEffectIntentSymbols
+        return invalidPaneSymbols
+    }
+
+    private fun collectAllIntentClasses(rootIntent: KSClassDeclaration): List<KSClassDeclaration> {
+        if (!rootIntent.modifiers.contains(KspModifier.SEALED)) {
+            logger.warn(
+                "Intent '${rootIntent.simpleName.asString()}' is not sealed; side effect DSL will be empty.",
+                rootIntent
+            )
+            return emptyList()
+        }
+
+        val result = mutableListOf<KSClassDeclaration>()
+
+        fun collect(sealedClass: KSClassDeclaration) {
+            sealedClass.getSealedSubclasses().forEach { subclass ->
+                if (subclass.modifiers.contains(KspModifier.SEALED)) {
+                    collect(subclass)
+                } else {
+                    result.add(subclass)
+                }
+            }
+        }
+
+        collect(rootIntent)
+        return result
     }
 
     private fun findNavArguments(paneFunction: KSFunctionDeclaration): List<NavArgumentInfo> {
@@ -164,7 +178,7 @@ class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private 
         return MviScreenConfig(
             uiStateDeclaration = uiStateType.declaration as KSClassDeclaration,
             intentDeclaration = intentType.declaration as KSClassDeclaration,
-            requiresInitialState = requiresInitialState
+            requiresInitialState = requiresInitialState,
         )
     }
 
@@ -269,16 +283,18 @@ class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private 
                 .returns(sideEffectInterface.copy(nullable = true))
                 .beginControlFlow("return when (intent)")
 
+        val nullableSideEffectInterface = sideEffectInterface.copy(nullable = true)
         annotatedIntents.forEach { intentClass ->
             val propName = getUniquePropName(intentClass, intentDeclaration)
             constructorBuilder.addParameter(
                 ParameterSpec
-                    .builder(propName, sideEffectInterface)
+                    .builder(propName, nullableSideEffectInterface)
+                    .defaultValue("null")
                     .build()
             )
             classBuilder.addProperty(
                 PropertySpec
-                    .builder(propName, sideEffectInterface, KModifier.PRIVATE)
+                    .builder(propName, nullableSideEffectInterface, KModifier.PRIVATE)
                     .initializer(propName)
                     .build()
             )
@@ -420,8 +436,8 @@ class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private 
                             "block",
                             LambdaTypeName.get(
                                 receiver =
-                                ClassName("com.buildkt.mvi", "TimeTravelDebuggerConfig")
-                                    .parameterizedBy(uiStateTypeName, intentTypeName),
+                                    ClassName("com.buildkt.mvi", "TimeTravelDebuggerConfig")
+                                        .parameterizedBy(uiStateTypeName, intentTypeName),
                                 returnType = UNIT
                             )
                         ).addStatement(

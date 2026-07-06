@@ -7,11 +7,12 @@ plugins {
 
 val artifactId = "annotation"
 group = "com.buildkt.mvi"
-version = "0.2.0"
+version = "0.3.0"
 
 kotlin {
     jvmToolchain(jdkVersion = 17)
 }
+
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
@@ -24,8 +25,7 @@ mavenPublishing {
 
     pom {
         name = "MVI Annotation Library"
-        description =
-            "Provides the KSP annotations (@MviScreen, @TriggersSideEffect, @NavArgument) for the buildkt MVI framework's code generation engine."
+        description = "Provides the KSP annotations (@MviScreen, @NavArgument) for the buildkt MVI framework's code generation engine."
         inceptionYear = "2025"
         url = "https://github.com/buildkt/mvi/"
         licenses {

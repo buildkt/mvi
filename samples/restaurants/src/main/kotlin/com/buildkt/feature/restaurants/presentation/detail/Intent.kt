@@ -3,7 +3,6 @@ package com.buildkt.feature.restaurants.presentation.detail
 import androidx.paging.PagingData
 import com.buildkt.feature.restaurants.domain.MenuItem
 import com.buildkt.feature.restaurants.domain.RestaurantInfo
-import com.buildkt.mvi.TriggersSideEffect
 import kotlinx.coroutines.flow.Flow
 
 sealed interface RestaurantDetailIntent {

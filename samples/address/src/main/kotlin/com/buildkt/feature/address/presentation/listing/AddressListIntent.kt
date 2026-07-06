@@ -1,6 +1,5 @@
 package com.buildkt.feature.address.presentation.listing
 
-import com.buildkt.mvi.TriggersSideEffect
 import kotlinx.coroutines.flow.Flow
 
 sealed interface AddressListIntent {
