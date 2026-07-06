@@ -4,21 +4,17 @@ import kotlinx.coroutines.flow.Flow
 
 sealed interface AddressListIntent {
     // Pane actions
-    @TriggersSideEffect
+
     data object BackClicked : AddressListIntent
 
-    @TriggersSideEffect
     data object PaneLaunched : AddressListIntent
 
-    @TriggersSideEffect
     data class AddressSelected(
         val addressId: Long,
     ) : AddressListIntent
 
-    @TriggersSideEffect
     data object AddNewAddress : AddressListIntent
 
-    @TriggersSideEffect
     data class EditAddress(
         val addressId: Long,
     ) : AddressListIntent

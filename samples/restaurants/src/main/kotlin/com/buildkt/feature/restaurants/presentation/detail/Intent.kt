@@ -6,14 +6,14 @@ import com.buildkt.feature.restaurants.domain.RestaurantInfo
 import kotlinx.coroutines.flow.Flow
 
 sealed interface RestaurantDetailIntent {
-    @TriggersSideEffect
+
     data class PaneLaunched(val restaurantId: Int) : RestaurantDetailIntent
-    @TriggersSideEffect
+
     data object BackClicked : RestaurantDetailIntent
-    @TriggersSideEffect
+
     data class RestaurantInfoLoaded(val info: RestaurantInfo) : RestaurantDetailIntent
-    @TriggersSideEffect
+
     data class MenusLoaded(val menus: Flow<PagingData<MenuItem>>) : RestaurantDetailIntent
-    @TriggersSideEffect
+
     data class MenuItemSelected(val menuItemId: String) : RestaurantDetailIntent
 }

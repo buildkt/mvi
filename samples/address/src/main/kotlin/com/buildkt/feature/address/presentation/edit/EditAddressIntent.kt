@@ -4,11 +4,10 @@ import com.buildkt.feature.address.domain.Address
 
 sealed interface EditAddressIntent {
     // Pane actions
-    @TriggersSideEffect
+
     data object BackClicked : EditAddressIntent
 
     // Load existing address
-    @TriggersSideEffect
     data class LoadAddress(
         val addressId: Long,
     ) : EditAddressIntent
@@ -24,22 +23,18 @@ sealed interface EditAddressIntent {
     }
 
     // Input has changed
-    @TriggersSideEffect
     data class StreetChanged(
         val value: String,
     ) : EditAddressIntent
 
-    @TriggersSideEffect
     data class CityChanged(
         val value: String,
     ) : EditAddressIntent
 
-    @TriggersSideEffect
     data class ZipChanged(
         val value: String,
     ) : EditAddressIntent
 
-    @TriggersSideEffect
     data class CountryChanged(
         val value: String,
     ) : EditAddressIntent
@@ -62,14 +57,13 @@ sealed interface EditAddressIntent {
     ) : EditAddressIntent
 
     // Save action and results
-    @TriggersSideEffect
+
     data object EditAddress : EditAddressIntent
 
     sealed interface EditAddressResult : EditAddressIntent {
-        @TriggersSideEffect
+
         data object Success : EditAddressResult
 
-        @TriggersSideEffect
         data class Failure(
             val message: String,
         ) : EditAddressResult
