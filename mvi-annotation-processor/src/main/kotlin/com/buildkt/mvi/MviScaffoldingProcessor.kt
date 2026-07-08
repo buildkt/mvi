@@ -34,8 +34,7 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import java.util.Locale
 
-class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private val logger: KSPLogger) :
-    SymbolProcessor {
+class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private val logger: KSPLogger) : SymbolProcessor {
     // Helper data class to hold nav argument info
     private data class NavArgumentInfo(val name: String, val typeName: TypeName)
 
@@ -435,9 +434,8 @@ class MviScaffoldingProcessor(private val codeGenerator: CodeGenerator, private 
                         .addParameter(
                             "block",
                             LambdaTypeName.get(
-                                receiver =
-                                    ClassName("com.buildkt.mvi", "TimeTravelDebuggerConfig")
-                                        .parameterizedBy(uiStateTypeName, intentTypeName),
+                                receiver = ClassName("com.buildkt.mvi", "TimeTravelDebuggerConfig")
+                                    .parameterizedBy(uiStateTypeName, intentTypeName),
                                 returnType = UNIT
                             )
                         ).addStatement(
